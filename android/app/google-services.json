@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "842736242891",
+    "project_id": "windwaker-908df",
+    "storage_bucket": "windwaker-908df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:842736242891:android:6a6f92a0e5c65ca6650b4e",
+        "android_client_info": {
+          "package_name": "dev.stepup.windwaker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnvBiZjaG7f_JDzsL5TQ7e8hE5XxJXQZI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
