@@ -34,11 +34,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'tu-api-key',
-    appId: 'tu-app-id',
-    messagingSenderId: 'tu-messaging-sender-id',
-    projectId: 'tu-project-id',
-    storageBucket: 'tu-storage-bucket',
+    apiKey: 'AIzaSyDnvBiZjaG7f_JDzsL5TQ7e8hE5XxJXQZI',
+    appId: '1:842736242891:android:6a6f92a0e5c65ca6650b4e',
+    messagingSenderId: '842736242891',
+    projectId: 'windwaker-908df',
+    storageBucket: 'windwaker-908df.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
