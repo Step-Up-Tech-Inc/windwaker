@@ -9,6 +9,7 @@ import 'package:windwaker/core/config/app_config.dart';
 import 'package:windwaker/core/config/firebase_options.dart';
 import 'package:windwaker/core/network/supabase_service.dart';
 import 'package:windwaker/core/theme/app_theme.dart';
+import 'screens/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,9 +21,7 @@ void main() async {
   ]);
 
   // Inicializar Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Configurar Crashlytics
   if (AppConfig.enableCrashlytics && !kDebugMode) {
@@ -57,11 +56,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: const Scaffold(
-        body: Center(
-          child: Text('Bienvenido a Tilarán en Línea'),
-        ),
-      ),
+      home: const SplashScreen(),
     );
   }
 }
