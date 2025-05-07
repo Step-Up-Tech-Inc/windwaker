@@ -13,7 +13,7 @@ class AppTheme {
         seedColor: primaryColor,
         secondary: secondaryColor,
         error: errorColor,
-        background: backgroundColor,
+        surface: backgroundColor,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
@@ -24,13 +24,8 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -59,9 +54,7 @@ class AppTheme {
       ),
       cardTheme: CardTheme(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
       ),
     );
@@ -85,13 +78,8 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -120,11 +108,9 @@ class AppTheme {
       ),
       cardTheme: CardTheme(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
       ),
     );
   }
-} 
+}

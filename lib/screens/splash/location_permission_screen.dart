@@ -1,8 +1,42 @@
 import 'package:flutter/material.dart';
-import 'location_permission_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class LocationPermissionScreen extends StatelessWidget {
+class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
+
+  @override
+  State<LocationPermissionScreen> createState() =>
+      _LocationPermissionScreenState();
+}
+
+class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
+  String? _errorMessage;
+  bool _isRequesting = false;
+
+  Future<void> requestLocationPermission() async {
+    setState(() {
+      _isRequesting = true;
+      _errorMessage = null;
+    });
+    final PermissionStatus status = await Permission.location.request();
+    setState(() {
+      _isRequesting = false;
+    });
+    if (status.isGranted) {
+      // Aquí puedes navegar a la siguiente pantalla o mostrar un mensaje de éxito
+    } else if (status.isDenied) {
+      setState(() {
+        _errorMessage =
+            'Permiso de ubicación denegado. Por favor, acepta para continuar.';
+      });
+    } else if (status.isPermanentlyDenied) {
+      setState(() {
+        _errorMessage =
+            'Permiso de ubicación bloqueado. Ve a la configuración para habilitarlo.';
+      });
+      await openAppSettings();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +73,21 @@ class LocationPermissionScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+                child: SelectableText.rich(
+                  TextSpan(
+                    text: _errorMessage,
+                    style: const TextStyle(color: Colors.red, fontSize: 15),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
@@ -47,7 +95,8 @@ class LocationPermissionScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed:
+                          _isRequesting ? null : requestLocationPermission,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2979FF),
                         shape: RoundedRectangleBorder(
@@ -56,21 +105,33 @@ class LocationPermissionScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Permitir acceso a ubicación',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                      child:
+                          _isRequesting
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                              : const Text(
+                                'Permitir acceso a ubicación',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: _isRequesting ? null : () {},
                       style: OutlinedButton.styleFrom(
                         backgroundColor: const Color(0xFFF5F5F5),
                         side: BorderSide.none,
