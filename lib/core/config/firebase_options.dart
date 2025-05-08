@@ -28,7 +28,7 @@ class DefaultFirebaseOptions {
         );
       default:
         throw UnsupportedError(
-          'Plataforma no soportada: ${defaultTargetPlatform}',
+          'Plataforma no soportada: $defaultTargetPlatform',
         );
     }
   }
@@ -50,4 +50,4 @@ class DefaultFirebaseOptions {
     iosClientId: 'tu-ios-client-id',
     iosBundleId: 'dev.stepup.windwaker',
   );
-} 
+}
