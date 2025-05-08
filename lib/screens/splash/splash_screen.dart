@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'location_permission_screen.dart';
+import 'package:go_router/go_router.dart';
 
 /// Pantalla de carga inicial de la aplicación.
 class SplashScreen extends StatefulWidget {
@@ -13,14 +13,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), _navigateToLocationPermission);
+    Future.delayed(const Duration(seconds: 2), _navigateToAuthGate);
   }
 
-  void _navigateToLocationPermission() {
+  void _navigateToAuthGate() {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const LocationPermissionScreen()),
-    );
+    context.go('/auth');
   }
 
   @override
@@ -48,7 +46,7 @@ class _SplashContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(32),
             boxShadow: <BoxShadow>[
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08 * 255),
+                color: Colors.black.withAlpha((0.08 * 255).toInt()),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),

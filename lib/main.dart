@@ -8,7 +8,9 @@ import 'package:windwaker/core/config/app_config.dart';
 import 'package:windwaker/core/config/firebase_options.dart';
 import 'package:windwaker/core/network/supabase_service.dart';
 import 'package:windwaker/core/theme/app_theme.dart';
-import 'screens/splash/splash_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/router.dart';
+import 'package:go_router/go_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,21 +43,22 @@ void main() async {
   // Inicializar el servicio de Supabase
   await SupabaseService().initialize();
 
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final GoRouter router = ref.watch(routerProvider);
+    return MaterialApp.router(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: const SplashScreen(),
+      routerConfig: router,
     );
   }
 }
