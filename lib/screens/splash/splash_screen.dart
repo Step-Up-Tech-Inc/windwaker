@@ -1,8 +1,27 @@
 import 'package:flutter/material.dart';
+import 'location_permission_screen.dart';
 
 /// Pantalla de carga inicial de la aplicación.
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 2), _navigateToLocationPermission);
+  }
+
+  void _navigateToLocationPermission() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const LocationPermissionScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
