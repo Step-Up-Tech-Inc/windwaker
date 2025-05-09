@@ -1,0 +1,193 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
+
+class CompleteProfileScreen extends StatefulWidget {
+  const CompleteProfileScreen({super.key});
+
+  @override
+  State<CompleteProfileScreen> createState() => _CompleteProfileScreenState();
+}
+
+class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  String? _errorMessage;
+  bool _isLoading = false;
+  bool _success = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+      _success = false;
+    });
+    try {
+      final String email = _emailController.text.trim();
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        // Solo para pruebas: permite avanzar igual
+        setState(() {
+          _success = true;
+        });
+        await Future.delayed(const Duration(milliseconds: 1200));
+        if (!mounted) return;
+        context.go('/location-permission');
+        return;
+      }
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(email: email),
+      );
+      setState(() {
+        _success = true;
+      });
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      context.go('/location-permission');
+    } on AuthException catch (err) {
+      setState(() {
+        _errorMessage = err.message;
+      });
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'Ocurrió un error inesperado.';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Completa tu perfil'),
+        backgroundColor: const Color(0xFF2979FF),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    const SizedBox(height: 32),
+                    const Icon(
+                      Icons.person,
+                      size: 64,
+                      color: Color(0xFF2979FF),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Completa tu perfil',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Correo electrónico',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (String? value) {
+                        if (value == null || value.isEmpty) {
+                          return 'El correo es obligatorio';
+                        }
+                        if (!RegExp(
+                          r'^[^@\s]+@[^@\s]+\.[^@\s]+',
+                        ).hasMatch(value)) {
+                          return 'Correo inválido';
+                        }
+                        return null;
+                      },
+                    ),
+                    if (_errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: SelectableText.rich(
+                          TextSpan(
+                            text: _errorMessage,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 15,
+                            ),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    if (_success)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: SelectableText.rich(
+                          const TextSpan(
+                            text: '¡Correo guardado con éxito!',
+                            style: TextStyle(color: Colors.green, fontSize: 15),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2979FF),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 0,
+                        ),
+                        child:
+                            _isLoading
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                                : const Text(
+                                  'Guardar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -5,6 +5,9 @@ import '../../screens/splash/splash_screen.dart';
 import '../../screens/auth/auth_gate_screen.dart';
 import '../../screens/splash/location_permission_screen.dart';
 import '../../screens/auth/email_verification_screen.dart';
+import '../../screens/auth/phone_login_screen.dart';
+import '../../screens/auth/otp_verification_screen.dart';
+import '../../screens/auth/complete_profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -28,6 +31,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
           return EmailVerificationScreen(email: email);
         },
+      ),
+      GoRoute(
+        path: '/phone-login',
+        builder: (context, state) => const PhoneLoginScreen(),
+      ),
+      GoRoute(
+        path: '/otp-verification',
+        builder: (context, state) {
+          final String? phone = state.uri.queryParameters['phone'];
+          if (phone == null) {
+            return const Scaffold(
+              body: Center(child: Text('Teléfono requerido')),
+            );
+          }
+          return OTPVerificationScreen(phone: phone);
+        },
+      ),
+      GoRoute(
+        path: '/complete-profile',
+        builder: (context, state) => const CompleteProfileScreen(),
       ),
     ],
   );

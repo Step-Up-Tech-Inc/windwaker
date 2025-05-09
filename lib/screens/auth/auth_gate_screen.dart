@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'widgets/login_form.dart';
-import 'widgets/register_form.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -56,7 +54,7 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                       borderRadius: BorderRadius.circular(32),
                       boxShadow: <BoxShadow>[
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withAlpha((0.08 * 255).round()),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -90,61 +88,30 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  if (!showLogin && !showRegister) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() => showLogin = true);
-                          print('Iniciar Sesión');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2979FF),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 0,
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.go('/phone-login');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2979FF),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
                         ),
-                        child: const Text(
-                          'Iniciar Sesión',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Iniciar sesión con teléfono',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() => showRegister = true);
-                          print('Registrarse');
-                        },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF5F5F5),
-                          side: BorderSide.none,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Registrarse',
-                          style: TextStyle(
-                            color: Color(0xFF2979FF),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (showLogin) const LoginForm(),
-                  if (showRegister) const RegisterForm(),
+                  ),
                 ],
               ),
             ),
