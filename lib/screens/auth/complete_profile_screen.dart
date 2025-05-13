@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'widgets/social_login_buttons.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -44,6 +47,111 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(email: email),
       );
+      setState(() {
+        _success = true;
+      });
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      context.go('/location-permission');
+    } on AuthException catch (err) {
+      setState(() {
+        _errorMessage = err.message;
+      });
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'Ocurrió un error inesperado.';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+      _success = false;
+    });
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() {
+          _errorMessage = 'Inicio de sesión cancelado.';
+        });
+        return;
+      }
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      if (idToken == null) {
+        setState(() {
+          _errorMessage = 'No se pudo obtener el token de Google.';
+        });
+        return;
+      }
+      final AuthResponse response = await Supabase.instance.client.auth
+          .signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
+      if (response.user == null) {
+        setState(() {
+          _errorMessage = 'No se pudo iniciar sesión con Google.';
+        });
+        return;
+      }
+      setState(() {
+        _success = true;
+      });
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      context.go('/location-permission');
+    } on AuthException catch (err) {
+      setState(() {
+        _errorMessage = err.message;
+      });
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'Ocurrió un error inesperado.';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _signInWithFacebook() async {
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+      _success = false;
+    });
+    try {
+      final LoginResult result = await FacebookAuth.instance.login();
+      if (result.status != LoginStatus.success) {
+        setState(() {
+          _errorMessage = 'No se pudo iniciar sesión con Facebook.';
+        });
+        return;
+      }
+      final String? accessToken = result.accessToken?.token;
+      if (accessToken == null) {
+        setState(() {
+          _errorMessage = 'No se pudo obtener el token de Facebook.';
+        });
+        return;
+      }
+      final AuthResponse response = await Supabase.instance.client.auth
+          .signInWithIdToken(
+            provider: OAuthProvider.facebook,
+            idToken: accessToken,
+          );
+      if (response.user == null) {
+        setState(() {
+          _errorMessage = 'No se pudo iniciar sesión con Facebook.';
+        });
+        return;
+      }
       setState(() {
         _success = true;
       });
@@ -180,6 +288,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                                   ),
                                 ),
                       ),
+                    ),
+                    const SizedBox(height: 32),
+                    SocialLoginButtons(
+                      onGooglePressed: _signInWithGoogle,
+                      onFacebookPressed: _signInWithFacebook,
+                      onApplePressed: null,
                     ),
                   ],
                 ),

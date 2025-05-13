@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Reemplaza con tus propios valores de Facebook Developer Console -->
+    <string name="facebook_app_id">TU_FACEBOOK_APP_ID</string>
+    <string name="facebook_client_token">TU_FACEBOOK_CLIENT_TOKEN</string>
+</resources> 

@@ -51,5 +51,26 @@
 	<string>Necesitamos tu ubicación para mostrarte tiendas cercanas y calcular entregas.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Necesitamos tu ubicación para mostrarte tiendas cercanas y calcular entregas.</string>
+
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fbTU_FACEBOOK_APP_ID</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAppID</key>
+	<string>TU_FACEBOOK_APP_ID</string>
+	<key>FacebookClientToken</key>
+	<string>TU_FACEBOOK_CLIENT_TOKEN</string>
+	<key>FacebookDisplayName</key>
+	<string>Wind Waker</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 </dict>
 </plist>
