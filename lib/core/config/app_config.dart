@@ -3,9 +3,9 @@ class AppConfig {
   static const String appVersion = '1.0.0';
 
   // API Endpoints
-  static const String supabaseUrl = 'https://cqhnpdfjurscptttscjk.supabase.co';
+  static const String supabaseUrl = 'https://dkbyhosszwxgztpxxbye.supabase.co';
   static const String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxaG5wZGZqdXJzY3B0dHRzY2prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU2OTk0ODgsImV4cCI6MjA2MTI3NTQ4OH0.ODCznjYbigoCCFqoSVQ4w5J7sU_d1-sEUR-2gVcE0G0';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrYnlob3Nzend4Z3p0cHh4YnllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3NDAyNzMsImV4cCI6MjA2MjMxNjI3M30.XM3m9E2sYWn0xU5Sd-76-OcdEieckBD9O7oQ7LJ1Of0';
 
   // Cache Configuration
   static const Duration cacheValidDuration = Duration(days: 7);
