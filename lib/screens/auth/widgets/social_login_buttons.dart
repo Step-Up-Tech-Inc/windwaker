@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:windwaker/core/config/remote_config_service.dart';
 
 class SocialLoginButtons extends StatelessWidget {
   final void Function()? onGooglePressed;
@@ -32,24 +33,30 @@ class SocialLoginButtons extends StatelessWidget {
           ),
         ),
       ),
-      const SizedBox(height: 12),
-      SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          icon: const Icon(Icons.facebook, size: 24, color: Color(0xFF1877F2)),
-          label: const Text(
-            'Continuar con Facebook',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          onPressed: onFacebookPressed,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+      if (RemoteConfigService().enableFacebookLogin) ...[
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            icon: const Icon(
+              Icons.facebook,
+              size: 24,
+              color: Color(0xFF1877F2),
+            ),
+            label: const Text(
+              'Continuar con Facebook',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            onPressed: onFacebookPressed,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
             ),
           ),
         ),
-      ),
+      ],
       const SizedBox(height: 12),
       SizedBox(
         width: double.infinity,
