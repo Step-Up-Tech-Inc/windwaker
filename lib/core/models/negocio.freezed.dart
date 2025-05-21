@@ -30,6 +30,7 @@ mixin _$Negocio {
   double get costoEnvio => throw _privateConstructorUsedError;
   String get categoria => throw _privateConstructorUsedError;
   String get ciudad => throw _privateConstructorUsedError;
+  bool get esDestacado => throw _privateConstructorUsedError;
   bool get activo => throw _privateConstructorUsedError;
 
   /// Serializes this Negocio to a JSON map.
@@ -56,6 +57,7 @@ abstract class $NegocioCopyWith<$Res> {
     double costoEnvio,
     String categoria,
     String ciudad,
+    bool esDestacado,
     bool activo,
   });
 }
@@ -84,6 +86,7 @@ class _$NegocioCopyWithImpl<$Res, $Val extends Negocio>
     Object? costoEnvio = null,
     Object? categoria = null,
     Object? ciudad = null,
+    Object? esDestacado = null,
     Object? activo = null,
   }) {
     return _then(
@@ -133,6 +136,11 @@ class _$NegocioCopyWithImpl<$Res, $Val extends Negocio>
                     ? _value.ciudad
                     : ciudad // ignore: cast_nullable_to_non_nullable
                         as String,
+            esDestacado:
+                null == esDestacado
+                    ? _value.esDestacado
+                    : esDestacado // ignore: cast_nullable_to_non_nullable
+                        as bool,
             activo:
                 null == activo
                     ? _value.activo
@@ -162,6 +170,7 @@ abstract class _$$NegocioImplCopyWith<$Res> implements $NegocioCopyWith<$Res> {
     double costoEnvio,
     String categoria,
     String ciudad,
+    bool esDestacado,
     bool activo,
   });
 }
@@ -189,6 +198,7 @@ class __$$NegocioImplCopyWithImpl<$Res>
     Object? costoEnvio = null,
     Object? categoria = null,
     Object? ciudad = null,
+    Object? esDestacado = null,
     Object? activo = null,
   }) {
     return _then(
@@ -238,6 +248,11 @@ class __$$NegocioImplCopyWithImpl<$Res>
                 ? _value.ciudad
                 : ciudad // ignore: cast_nullable_to_non_nullable
                     as String,
+        esDestacado:
+            null == esDestacado
+                ? _value.esDestacado
+                : esDestacado // ignore: cast_nullable_to_non_nullable
+                    as bool,
         activo:
             null == activo
                 ? _value.activo
@@ -261,6 +276,7 @@ class _$NegocioImpl implements _Negocio {
     required this.costoEnvio,
     required this.categoria,
     required this.ciudad,
+    this.esDestacado = false,
     required this.activo,
   });
 
@@ -286,11 +302,14 @@ class _$NegocioImpl implements _Negocio {
   @override
   final String ciudad;
   @override
+  @JsonKey()
+  final bool esDestacado;
+  @override
   final bool activo;
 
   @override
   String toString() {
-    return 'Negocio(id: $id, nombre: $nombre, imagenUrl: $imagenUrl, calificacion: $calificacion, tiempoEntregaMin: $tiempoEntregaMin, tiempoEntregaMax: $tiempoEntregaMax, costoEnvio: $costoEnvio, categoria: $categoria, ciudad: $ciudad, activo: $activo)';
+    return 'Negocio(id: $id, nombre: $nombre, imagenUrl: $imagenUrl, calificacion: $calificacion, tiempoEntregaMin: $tiempoEntregaMin, tiempoEntregaMax: $tiempoEntregaMax, costoEnvio: $costoEnvio, categoria: $categoria, ciudad: $ciudad, esDestacado: $esDestacado, activo: $activo)';
   }
 
   @override
@@ -313,6 +332,8 @@ class _$NegocioImpl implements _Negocio {
             (identical(other.categoria, categoria) ||
                 other.categoria == categoria) &&
             (identical(other.ciudad, ciudad) || other.ciudad == ciudad) &&
+            (identical(other.esDestacado, esDestacado) ||
+                other.esDestacado == esDestacado) &&
             (identical(other.activo, activo) || other.activo == activo));
   }
 
@@ -329,6 +350,7 @@ class _$NegocioImpl implements _Negocio {
     costoEnvio,
     categoria,
     ciudad,
+    esDestacado,
     activo,
   );
 
@@ -357,6 +379,7 @@ abstract class _Negocio implements Negocio {
     required final double costoEnvio,
     required final String categoria,
     required final String ciudad,
+    final bool esDestacado,
     required final bool activo,
   }) = _$NegocioImpl;
 
@@ -380,6 +403,8 @@ abstract class _Negocio implements Negocio {
   String get categoria;
   @override
   String get ciudad;
+  @override
+  bool get esDestacado;
   @override
   bool get activo;
 

@@ -24,9 +24,18 @@ class HomeCubit extends Cubit<HomeState> {
 
     try {
       final String ciudad = await _locationService.getCurrentCity();
-      final List<Negocio> negocios = await _negociosRepository.getNegocios();
 
-      emit(HomeState.loaded(ciudad: ciudad, negocios: negocios));
+      // Cargar los negocios destacados específicamente para la sección "Tiendas populares"
+      final List<Negocio> negociosDestacados =
+          await _negociosRepository.getNegociosDestacados();
+
+      // Si no hay destacados, cargamos todos para no mostrar una sección vacía
+      final List<Negocio> negociosParaMostrar =
+          negociosDestacados.isNotEmpty
+              ? negociosDestacados
+              : await _negociosRepository.getNegocios();
+
+      emit(HomeState.loaded(ciudad: ciudad, negocios: negociosParaMostrar));
     } catch (error) {
       emit(HomeState.error(message: error.toString()));
     }

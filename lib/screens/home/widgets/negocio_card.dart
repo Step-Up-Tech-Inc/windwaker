@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/negocio.dart';
 
 class NegocioCard extends StatelessWidget {
@@ -16,76 +15,109 @@ class NegocioCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Imagen del negocio
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: CachedNetworkImage(
-              imageUrl: negocio.imagenUrl,
-              fit: BoxFit.cover,
-              placeholder:
-                  (context, url) => Container(
-                    color: Colors.grey[200],
-                    child: const Center(child: CircularProgressIndicator()),
+          Stack(
+            children: [
+              AspectRatio(
+                aspectRatio: 1.5,
+                child: Image.network(
+                  negocio.imagenUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value:
+                            loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Icon(Icons.error_outline, color: Colors.grey),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (negocio.esDestacado)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star, color: Colors.white, size: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          'Destacado',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-              errorWidget:
-                  (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.error),
-                  ),
-            ),
+                ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nombre del negocio (máximo 2 líneas)
                 Text(
                   negocio.nombre,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                // Calificación con estrellas
                 Row(
                   children: [
-                    _buildRatingStars(negocio.calificacion),
+                    Icon(Icons.star, color: Colors.amber, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       negocio.calificacion.toString(),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(fontSize: 12),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Tiempo de entrega
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 8),
                     Text(
-                      '${negocio.tiempoEntregaMin}–${negocio.tiempoEntregaMax} min',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      '${negocio.tiempoEntregaMin}-${negocio.tiempoEntregaMax} min',
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                // Costo de envío
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.delivery_dining,
-                      size: 14,
-                      color: Colors.grey,
+                      color: Colors.grey[600],
+                      size: 16,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '₡${negocio.costoEnvio.toInt()}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      '₡${negocio.costoEnvio.toInt()} Envío',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -94,22 +126,6 @@ class NegocioCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildRatingStars(double rating) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        if (index < rating.floor()) {
-          return const Icon(Icons.star, size: 14, color: Colors.amber);
-        } else if (index < rating.ceil() &&
-            rating.truncateToDouble() != rating) {
-          return const Icon(Icons.star_half, size: 14, color: Colors.amber);
-        } else {
-          return const Icon(Icons.star_border, size: 14, color: Colors.amber);
-        }
-      }),
     );
   }
 }

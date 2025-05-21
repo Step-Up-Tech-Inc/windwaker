@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.negocios (
     costo_envio NUMERIC(10, 2) NOT NULL CHECK (costo_envio >= 0),
     categoria TEXT NOT NULL,
     ciudad TEXT NOT NULL,
+    es_destacado BOOLEAN NOT NULL DEFAULT FALSE,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.negocios (
 CREATE INDEX IF NOT EXISTS idx_negocios_ciudad ON public.negocios(ciudad);
 CREATE INDEX IF NOT EXISTS idx_negocios_categoria ON public.negocios(categoria);
 CREATE INDEX IF NOT EXISTS idx_negocios_activo ON public.negocios(activo);
+CREATE INDEX IF NOT EXISTS idx_negocios_destacado ON public.negocios(es_destacado);
 
 -- Función para actualizar el timestamp de updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -35,10 +37,10 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 -- Insertar datos de ejemplo
-INSERT INTO public.negocios (nombre, imagen_url, calificacion, tiempo_entrega_min, tiempo_entrega_max, costo_envio, categoria, ciudad, activo)
+INSERT INTO public.negocios (nombre, imagen_url, calificacion, tiempo_entrega_min, tiempo_entrega_max, costo_envio, categoria, ciudad, es_destacado, activo)
 VALUES 
-    ('Restaurante El Buen Sabor', 'https://picsum.photos/200/300', 4.5, 25, 35, 1500, 'Restaurante', 'Tilarán', TRUE),
-    ('Supermercado La Esquina', 'https://picsum.photos/200/300', 4.2, 15, 25, 1200, 'Supermercado', 'Tilarán', TRUE);
+    ('Restaurante El Buen Sabor', 'https://picsum.photos/200/300', 4.5, 25, 35, 1500, 'Restaurante', 'Tilarán', TRUE, TRUE),
+    ('Supermercado La Esquina', 'https://picsum.photos/200/300', 4.2, 15, 25, 1200, 'Supermercado', 'Tilarán', TRUE, TRUE);
 
 -- Configurar permisos (RLS - Row Level Security)
 ALTER TABLE public.negocios ENABLE ROW LEVEL SECURITY;

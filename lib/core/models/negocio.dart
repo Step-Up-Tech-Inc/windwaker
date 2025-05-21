@@ -16,6 +16,7 @@ class Negocio with _$Negocio {
     required double costoEnvio,
     required String categoria,
     required String ciudad,
+    @Default(false) bool esDestacado,
     required bool activo,
   }) = _Negocio;
 

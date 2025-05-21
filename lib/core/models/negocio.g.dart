@@ -17,6 +17,7 @@ _$NegocioImpl _$$NegocioImplFromJson(Map<String, dynamic> json) =>
       costoEnvio: (json['costo_envio'] as num).toDouble(),
       categoria: json['categoria'] as String,
       ciudad: json['ciudad'] as String,
+      esDestacado: json['es_destacado'] as bool? ?? false,
       activo: json['activo'] as bool,
     );
 
@@ -31,5 +32,6 @@ Map<String, dynamic> _$$NegocioImplToJson(_$NegocioImpl instance) =>
       'costo_envio': instance.costoEnvio,
       'categoria': instance.categoria,
       'ciudad': instance.ciudad,
+      'es_destacado': instance.esDestacado,
       'activo': instance.activo,
     };
