@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:windwaker/core/config/app_config.dart';
 import 'package:windwaker/core/config/firebase_options.dart';
+import 'package:windwaker/core/config/remote_config_service.dart';
 import 'package:windwaker/core/network/supabase_service.dart';
 import 'package:windwaker/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +34,9 @@ void main() async {
       return true;
     };
   }
+
+  // Inicializar Remote Config
+  await RemoteConfigService().initialize();
 
   // Inicializar Supabase
   await Supabase.initialize(

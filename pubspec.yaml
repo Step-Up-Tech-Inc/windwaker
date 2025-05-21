@@ -46,6 +46,8 @@ dependencies:
   firebase_crashlytics: ^3.5.7
   firebase_messaging: ^14.7.9
   firebase_remote_config: ^4.3.3
+  google_sign_in: ^6.2.1
+  flutter_facebook_auth: ^6.1.1
 
   # Utils
   get_it: ^7.6.7
