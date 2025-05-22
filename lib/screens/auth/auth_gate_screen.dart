@@ -45,6 +45,7 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
     try {
       final LoginResult result = await FacebookAuth.instance.login();
       if (result.status == LoginStatus.success) {
+        // ignore: unused_local_variable
         final AccessToken accessToken = result.accessToken!;
 
         // Aquí se integraría con Supabase para autenticar con el token de Facebook

@@ -92,3 +92,41 @@ lib/
 ## Licencia
 
 Este proyecto está bajo la licencia [MIT](LICENSE).
+
+## Configuración de Supabase
+
+### Creación de la tabla de negocios
+
+Para crear la tabla de negocios en Supabase, sigue estos pasos:
+
+1. Inicia sesión en tu cuenta de Supabase y selecciona tu proyecto.
+2. Ve a la sección "SQL Editor" en el panel lateral.
+3. Crea un nuevo script SQL.
+4. Copia y pega el contenido del archivo `supabase/migrations/20240523_create_negocios_table.sql`.
+5. Ejecuta el script haciendo clic en "Run".
+
+El script creará:
+- La tabla `negocios` con todos los campos necesarios.
+- Índices para mejorar el rendimiento.
+- Un trigger para actualizar automáticamente el campo `updated_at`.
+- Dos registros de ejemplo para probar la aplicación.
+- Políticas de seguridad (RLS) para controlar el acceso a los datos.
+
+### Conexión con la aplicación
+
+La aplicación ya está configurada para conectarse a Supabase. Los detalles de conexión se encuentran en `lib/core/config/app_config.dart`.
+
+## Desarrollo
+
+### Ejecutar la aplicación
+
+```bash
+flutter pub get
+flutter run
+```
+
+### Regenerar código generado
+
+```bash
+flutter pub run build_runner build --delete-conflicting-outputs
+```
