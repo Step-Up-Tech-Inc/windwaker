@@ -4,6 +4,8 @@ import '../../core/models/negocio.dart';
 import 'cubit/home_cubit.dart';
 import 'widgets/promotion_carousel.dart';
 import 'widgets/category_carousel.dart';
+import '../search/widgets/bottom_navigation.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +16,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _ubicacionExpandida = false;
-  int _selectedIndex = 0; // Para la barra de navegación
 
   @override
   void initState() {
@@ -45,31 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: (index) {
-        setState(() {
-          _selectedIndex = index;
-        });
-        // En el futuro, aquí se navegará a las diferentes pantallas
-      },
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.blue,
-      unselectedItemColor: Colors.grey,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.receipt_long),
-          label: 'Pedidos',
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
-      ],
+      bottomNavigationBar: const BottomNavigation(currentIndex: 0),
     );
   }
 
@@ -142,7 +119,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   fillColor: Colors.transparent,
                   isDense: true,
                 ),
-                enabled: true, // Está habilitado pero no hace nada
+                enabled: true,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    context.go('/search?query=$value');
+                  } else {
+                    context.go('/search');
+                  }
+                },
+                onTap: () {
+                  // Opcionalmente, se puede navegar directamente al hacer clic
+                  // context.go('/search');
+                },
                 style: const TextStyle(fontSize: 16),
               ),
             ),

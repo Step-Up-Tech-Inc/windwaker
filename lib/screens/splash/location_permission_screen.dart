@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:go_router/go_router.dart';
 
 class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
@@ -23,7 +24,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
       _isRequesting = false;
     });
     if (status.isGranted) {
-      // Aquí puedes navegar a la siguiente pantalla o mostrar un mensaje de éxito
+      // Navegar a la pantalla principal
+      if (mounted) {
+        context.go('/home');
+      }
     } else if (status.isDenied) {
       setState(() {
         _errorMessage =
@@ -36,6 +40,11 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
       });
       await openAppSettings();
     }
+  }
+
+  void _skipPermission() {
+    // Navegar a la pantalla principal sin permisos
+    context.go('/home');
   }
 
   @override
@@ -131,7 +140,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: _isRequesting ? null : () {},
+                      onPressed: _isRequesting ? null : _skipPermission,
                       style: OutlinedButton.styleFrom(
                         backgroundColor: const Color(0xFFF5F5F5),
                         side: BorderSide.none,
@@ -154,14 +163,17 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
               ),
             ),
             const Spacer(),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 24),
-              child: Text(
-                'Saltar este paso',
-                style: TextStyle(
-                  color: Color(0xFFBDBDBD),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
+            GestureDetector(
+              onTap: _skipPermission,
+              child: const Padding(
+                padding: EdgeInsets.only(bottom: 24),
+                child: Text(
+                  'Saltar este paso',
+                  style: TextStyle(
+                    color: Color(0xFFBDBDBD),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),

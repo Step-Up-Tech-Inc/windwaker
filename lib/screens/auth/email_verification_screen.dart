@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 
 class EmailVerificationScreen extends StatelessWidget {
   final String email;
-  const EmailVerificationScreen({super.key, required this.email});
+  final Logger _logger = Logger();
+
+  EmailVerificationScreen({super.key, required this.email});
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +61,7 @@ class EmailVerificationScreen extends StatelessWidget {
                   TextButton(
                     onPressed: () {
                       // Aquí puedes implementar la lógica para reenviar el correo si lo deseas
-                      print('Reenviar correo a: $email');
+                      _logger.i('Reenviar correo a: $email');
                     },
                     child: const Text('Reenviar correo de confirmación'),
                   ),

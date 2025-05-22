@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:windwaker/core/config/app_config.dart';
 import 'package:windwaker/core/config/di_config.dart';
 import 'package:windwaker/core/config/firebase_options.dart';
@@ -12,8 +11,7 @@ import 'package:windwaker/core/config/remote_config_service.dart';
 import 'package:windwaker/core/network/supabase_service.dart';
 import 'package:windwaker/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:windwaker/screens/home/cubit/home_cubit.dart';
-import 'package:windwaker/screens/home/home_screen.dart';
+import 'package:windwaker/core/router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,18 +72,15 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Para desarrollo, usamos directamente la pantalla de inicio
-    // En producción, se usaría el router
-    return MaterialApp(
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: BlocProvider(
-        create: (_) => getIt<HomeCubit>(),
-        child: const HomeScreen(),
-      ),
+      routerConfig: router,
     );
   }
 }
