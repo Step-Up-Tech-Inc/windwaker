@@ -10,6 +10,7 @@ import '../screens/auth/otp_verification_screen.dart';
 import '../screens/auth/complete_profile_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/store/test_store_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../screens/home/cubit/home_cubit.dart';
 import 'config/di_config.dart';
@@ -66,11 +67,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/home',
-        builder:
-            (context, state) => BlocProvider(
-              create: (_) => getIt<HomeCubit>(),
-              child: const HomeScreen(),
-            ),
+        builder: (context, state) {
+          return Builder(
+            builder: (context) {
+              return BlocProvider(
+                create: (_) => getIt<HomeCubit>(),
+                child: const HomeScreen(),
+              );
+            },
+          );
+        },
       ),
       GoRoute(
         path: '/orders',
@@ -84,6 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder:
             (context, state) =>
                 const Scaffold(body: Center(child: Text('Pantalla de Perfil'))),
+      ),
+      GoRoute(
+        path: '/test-store',
+        builder: (context, state) => const TestStoreScreen(),
       ),
     ],
   );

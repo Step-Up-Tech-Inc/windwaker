@@ -6,6 +6,7 @@ import 'widgets/promotion_carousel.dart';
 import 'widgets/category_carousel.dart';
 import '../search/widgets/bottom_navigation.dart';
 import 'package:go_router/go_router.dart';
+import '../store/store_products_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -197,7 +198,15 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
-          // Acción al tocar una tienda (para el futuro)
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder:
+                  (context) => StoreProductsScreen(
+                    storeId: negocio.id,
+                    storeName: negocio.nombre,
+                  ),
+            ),
+          );
         },
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
