@@ -51,133 +51,139 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            const _PageIndicator(),
-            const SizedBox(height: 48),
-            const _LocationIcon(),
-            const SizedBox(height: 32),
-            const Text(
-              'Habilitar ubicación',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 28,
-                letterSpacing: 1.1,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                'Necesitamos acceder a tu ubicación para mostrarte las tiendas más cercanas y calcular los tiempos de entrega.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF424242),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                child: SelectableText.rich(
-                  TextSpan(
-                    text: _errorMessage,
-                    style: const TextStyle(color: Colors.red, fontSize: 15),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24.0),
+            child: Column(
+              children: <Widget>[
+                const _PageIndicator(),
+                const SizedBox(height: 40),
+                const _LocationIcon(),
+                const SizedBox(height: 32),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    'Habilitar ubicación',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      letterSpacing: 1.1,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                children: <Widget>[
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed:
-                          _isRequesting ? null : requestLocationPermission,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2979FF),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
+                const SizedBox(height: 16),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    'Necesitamos acceder a tu ubicación para mostrarte las tiendas más cercanas y calcular los tiempos de entrega.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF424242),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    child: SelectableText.rich(
+                      TextSpan(
+                        text: _errorMessage,
+                        style: const TextStyle(color: Colors.red, fontSize: 15),
                       ),
-                      child:
-                          _isRequesting
-                              ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    children: <Widget>[
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed:
+                              _isRequesting ? null : requestLocationPermission,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2979FF),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                          ),
+                          child:
+                              _isRequesting
+                                  ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : const Text(
+                                    'Permitir acceso a ubicación',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
-                                ),
-                              )
-                              : const Text(
-                                'Permitir acceso a ubicación',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _isRequesting ? null : _skipPermission,
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF5F5F5),
-                        side: BorderSide.none,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'Ahora no',
-                        style: TextStyle(
-                          color: Color(0xFF424242),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: _skipPermission,
-              child: const Padding(
-                padding: EdgeInsets.only(bottom: 24),
-                child: Text(
-                  'Saltar este paso',
-                  style: TextStyle(
-                    color: Color(0xFFBDBDBD),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _isRequesting ? null : _skipPermission,
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF5F5F5),
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text(
+                            'Ahora no',
+                            style: TextStyle(
+                              color: Color(0xFF424242),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 40),
+                GestureDetector(
+                  onTap: _skipPermission,
+                  child: const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Saltar este paso',
+                      style: TextStyle(
+                        color: Color(0xFFBDBDBD),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

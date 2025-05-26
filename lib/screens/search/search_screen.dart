@@ -8,6 +8,7 @@ import 'widgets/search_bar_widget.dart';
 import 'widgets/category_selector.dart';
 import 'widgets/store_card.dart';
 import 'widgets/bottom_navigation.dart';
+import '../store/store_products_screen.dart';
 
 class SearchScreen extends StatelessWidget {
   final String? initialQuery;
@@ -112,11 +113,13 @@ class SearchScreen extends StatelessWidget {
                           child: StoreCard(
                             store: store,
                             onTap: () {
-                              // Por ahora solo mostramos un mensaje
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Seleccionaste: ${store.name}'),
-                                  duration: const Duration(seconds: 1),
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => StoreProductsScreen(
+                                        storeId: store.id,
+                                        storeName: store.name,
+                                      ),
                                 ),
                               );
                             },

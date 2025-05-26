@@ -130,3 +130,49 @@ flutter run
 ```bash
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
+
+## Solución al problema de tablas en Supabase
+
+Se ha detectado un problema en la estructura de las tablas de Supabase que causa el error:
+```
+relation "public.marketplace.products" does not exist
+```
+
+Este error se debe a que inicialmente se crearon las tablas en el esquema `marketplace`, pero la aplicación intenta acceder a las tablas en el esquema `public`.
+
+### Solución
+
+Para solucionar este problema, se han creado dos migraciones:
+
+1. **20240608_fix_tables_schema.sql**: Esta migración mueve las tablas del esquema `marketplace` al esquema `public`, copiando todos los datos existentes.
+
+2. **20240608_data_seed.sql**: Esta migración inserta datos de ejemplo en las tablas del esquema `public` en caso de que estén vacías.
+
+### Cómo aplicar las migraciones
+
+Para aplicar estas migraciones, ejecuta estos pasos:
+
+1. Inicia sesión en Supabase y accede al editor SQL.
+2. Abre el archivo `supabase/migrations/20240608_fix_tables_schema.sql` y ejecuta su contenido en el editor SQL.
+3. Abre el archivo `supabase/migrations/20240608_data_seed.sql` y ejecuta su contenido en el editor SQL.
+4. Reinicia la aplicación para que los cambios surtan efecto.
+
+### Cambios realizados en el código
+
+También se han actualizado las consultas en el repositorio de productos para que accedan a las tablas en el esquema `public` en vez de `marketplace.products`, por ejemplo:
+
+```dart
+// Antes
+final response = await _supabaseClient
+    .from('marketplace.products')
+    .select()
+    ...
+
+// Ahora
+final response = await _supabaseClient
+    .from('products')
+    .select()
+    ...
+```
+
+Estos cambios ya se han aplicado en el código fuente.
