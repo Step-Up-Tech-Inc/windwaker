@@ -28,11 +28,21 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   Future<void> _submit() async {
     setState(() {
       _errorMessage = null;
-      _isLoading = true;
       _success = false;
     });
+
+    // Validar el formulario
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      final String email = _emailController.text.trim();
+      // Normalizar el correo electrónico: eliminar espacios y convertir a minúsculas
+      final String email = _emailController.text.trim().toLowerCase();
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
         // Solo para pruebas: permite avanzar igual
@@ -176,12 +186,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Completa tu perfil'),
-        backgroundColor: const Color(0xFF2979FF),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -189,6 +193,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Form(
                 key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -205,7 +210,17 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
-                        fontSize: 20,
+                        fontSize: 24,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Añade tu correo electrónico',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 18,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -222,9 +237,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           return 'El correo es obligatorio';
                         }
                         if (!RegExp(
-                          r'^[^@\s]+@[^@\s]+\.[^@\s]+',
+                          r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
                         ).hasMatch(value)) {
-                          return 'Correo inválido';
+                          return 'Formato de correo electrónico inválido';
                         }
                         return null;
                       },

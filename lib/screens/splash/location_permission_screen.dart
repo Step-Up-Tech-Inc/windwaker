@@ -13,27 +13,85 @@ class LocationPermissionScreen extends StatefulWidget {
 class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
   String? _errorMessage;
   bool _isRequesting = false;
+  bool _isChecking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLocationPermission();
+  }
+
+  Future<void> _checkLocationPermission() async {
+    setState(() {
+      _isChecking = true;
+    });
+
+    final PermissionStatus status = await Permission.location.status;
+
+    if (status.isGranted || status.isLimited) {
+      // Si ya tenemos el permiso (completo o limitado), navegamos directamente a la pantalla principal
+      if (mounted) {
+        context.go('/home');
+      }
+      return;
+    }
+
+    // Si está permanentemente denegado, mostramos el mensaje adecuado
+    if (status.isPermanentlyDenied) {
+      setState(() {
+        _isChecking = false;
+        _errorMessage =
+            'Permiso de ubicación bloqueado. Ve a la configuración para habilitarlo.';
+      });
+      return;
+    }
+
+    // Si está restringido, mostramos un mensaje específico
+    if (status.isRestricted) {
+      setState(() {
+        _isChecking = false;
+        _errorMessage =
+            'El acceso a la ubicación está restringido por controles parentales o políticas de la organización.';
+      });
+      return;
+    }
+
+    // Para cualquier otro estado (denegado o no determinado), mostramos la pantalla de solicitud
+    setState(() {
+      _isChecking = false;
+    });
+  }
 
   Future<void> requestLocationPermission() async {
     setState(() {
       _isRequesting = true;
       _errorMessage = null;
     });
-    final PermissionStatus status = await Permission.location.request();
+
+    // Primero intentar con el permiso preciso
+    PermissionStatus status = await Permission.locationWhenInUse.request();
+
     setState(() {
       _isRequesting = false;
     });
-    if (status.isGranted) {
-      // Navegar a la pantalla principal
+
+    if (status.isGranted || status.isLimited) {
+      // Navegar a la pantalla principal si el permiso es concedido o limitado
       if (mounted) {
         context.go('/home');
       }
-    } else if (status.isDenied) {
+      return;
+    }
+
+    if (status.isDenied) {
       setState(() {
         _errorMessage =
             'Permiso de ubicación denegado. Por favor, acepta para continuar.';
       });
-    } else if (status.isPermanentlyDenied) {
+      return;
+    }
+
+    if (status.isPermanentlyDenied) {
       setState(() {
         _errorMessage =
             'Permiso de ubicación bloqueado. Ve a la configuración para habilitarlo.';
@@ -49,6 +107,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isChecking) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(

@@ -49,83 +49,178 @@ class SearchScreen extends StatelessWidget {
                     if (state.errorMessage != null) {
                       return Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: SelectableText.rich(
-                            TextSpan(
-                              text: 'Error: ',
-                              style: const TextStyle(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 64,
                                 color: Colors.red,
-                                fontWeight: FontWeight.bold,
                               ),
-                              children: [
+                              const SizedBox(height: 16),
+                              SelectableText.rich(
                                 TextSpan(
-                                  text: state.errorMessage,
+                                  text: 'Ocurrió un error\n\n',
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.normal,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: state.errorMessage,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed:
+                                    () => context.read<SearchCubit>().init(),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Reintentar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2979FF),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       );
                     }
 
-                    if (state.stores.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.search_off,
-                              size: 80,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              'No se encontraron tiendas',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              state.searchQuery.isNotEmpty
-                                  ? 'Intenta con otra búsqueda'
-                                  : state.selectedCategory.isNotEmpty
-                                  ? 'No hay tiendas en esta categoría'
-                                  : 'No hay tiendas disponibles',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(top: 10, bottom: 20),
-                      itemCount: state.stores.length,
-                      itemBuilder: (context, index) {
-                        final store = state.stores[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 8.0,
-                          ),
-                          child: StoreCard(
-                            store: store,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => StoreProductsScreen(
-                                        storeId: store.id,
-                                        storeName: store.name,
-                                      ),
+                    // Si hay búsqueda o filtro por categoría, mostrar solo los resultados
+                    if (state.searchQuery.isNotEmpty ||
+                        state.selectedCategory.isNotEmpty) {
+                      if (state.stores.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.store_mall_directory_outlined,
+                                size: 80,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'No se encontraron tiendas',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 10),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 40,
                                 ),
-                              );
-                            },
+                                child: Text(
+                                  state.searchQuery.isNotEmpty
+                                      ? 'No hay resultados para "${state.searchQuery}". Intenta con otra búsqueda.'
+                                      : state.selectedCategory.isNotEmpty
+                                      ? 'No hay tiendas en la categoría "${state.selectedCategory}".'
+                                      : 'No hay tiendas disponibles en este momento.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
                           ),
                         );
-                      },
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(top: 10, bottom: 20),
+                        itemCount: state.stores.length,
+                        itemBuilder: (context, index) {
+                          final store = state.stores[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 8.0,
+                            ),
+                            child: StoreCard(
+                              store: store,
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => StoreProductsScreen(
+                                          storeId: store.id,
+                                          storeName: store.name,
+                                        ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    // Vista principal cuando no hay búsqueda ni filtros
+                    return ListView(
+                      padding: const EdgeInsets.only(top: 10, bottom: 20),
+                      children: [
+                        // Todas las tiendas
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: 16,
+                            top: 8,
+                            bottom: 8,
+                          ),
+                          child: Text(
+                            'Todas las tiendas',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+
+                        if (state.stores.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Center(
+                              child: Text(
+                                'No hay tiendas disponibles en este momento.',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          )
+                        else
+                          ...state.stores.map(
+                            (store) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                                vertical: 8.0,
+                              ),
+                              child: StoreCard(
+                                store: store,
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => StoreProductsScreen(
+                                            storeId: store.id,
+                                            storeName: store.name,
+                                          ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
                     );
                   },
                 ),

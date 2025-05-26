@@ -9,6 +9,7 @@ class SearchState with _$SearchState {
     @Default('') String searchQuery,
     @Default('') String selectedCategory,
     @Default([]) List<Store> stores,
+    @Default([]) List<Store> featuredStores,
     @Default([]) List<String> categories,
     @Default(false) bool isLoading,
     String? errorMessage,

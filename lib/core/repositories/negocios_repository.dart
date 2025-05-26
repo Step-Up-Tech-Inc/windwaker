@@ -10,103 +10,57 @@ class NegociosRepository {
   Future<List<Negocio>> getNegocios() async {
     try {
       final response = await _supabaseClient
-          .from('negocios')
+          .from('stores')
           .select()
-          .eq('activo', true)
-          .order('nombre');
+          .eq('is_deleted', false)
+          .order('name');
 
       return (response as List<dynamic>).map((json) {
-        final Map<String, dynamic> negocioJson = json as Map<String, dynamic>;
-
-        // Convertir es_destacado a esDestacado para el modelo
-        if (negocioJson.containsKey('es_destacado')) {
-          negocioJson['esDestacado'] = negocioJson['es_destacado'];
-        }
-
-        return Negocio.fromJson(negocioJson);
+        return Negocio(
+          id: json['id'],
+          nombre: json['name'],
+          imagenUrl: json['image_url'],
+          calificacion: (json['rating'] as num).toDouble(),
+          tiempoEntregaMin: (json['delivery_time_minutes'] as num).toInt() - 5,
+          tiempoEntregaMax: (json['delivery_time_minutes'] as num).toInt() + 5,
+          costoEnvio: (json['delivery_fee'] as num).toDouble(),
+          categoria: json['category'],
+          ciudad: 'Tilarán',
+          esDestacado: json['is_featured'] ?? false,
+          activo: json['is_open'] ?? true,
+        );
       }).toList();
     } catch (e) {
-      // En caso de error, devolvemos datos de ejemplo
-      return [
-        Negocio(
-          id: '1',
-          nombre: 'Restaurante El Buen Sabor',
-          imagenUrl: 'https://picsum.photos/200/300',
-          calificacion: 4.5,
-          tiempoEntregaMin: 25,
-          tiempoEntregaMax: 35,
-          costoEnvio: 1500,
-          categoria: 'Restaurante',
-          ciudad: 'Tilarán',
-          esDestacado: true,
-          activo: true,
-        ),
-        Negocio(
-          id: '2',
-          nombre: 'Supermercado La Esquina',
-          imagenUrl: 'https://picsum.photos/200/300',
-          calificacion: 4.2,
-          tiempoEntregaMin: 15,
-          tiempoEntregaMax: 25,
-          costoEnvio: 1200,
-          categoria: 'Supermercado',
-          ciudad: 'Tilarán',
-          esDestacado: true,
-          activo: true,
-        ),
-      ];
+      throw Exception('Error al obtener negocios: ${e.toString()}');
     }
   }
 
   Future<List<Negocio>> getNegociosDestacados() async {
     try {
       final response = await _supabaseClient
-          .from('negocios')
+          .from('stores')
           .select()
-          .eq('activo', true)
-          .eq('es_destacado', true)
-          .order('nombre');
+          .eq('is_deleted', false)
+          .eq('is_featured', true)
+          .order('name');
 
       return (response as List<dynamic>).map((json) {
-        final Map<String, dynamic> negocioJson = json as Map<String, dynamic>;
-
-        // Convertir es_destacado a esDestacado para el modelo
-        if (negocioJson.containsKey('es_destacado')) {
-          negocioJson['esDestacado'] = negocioJson['es_destacado'];
-        }
-
-        return Negocio.fromJson(negocioJson);
+        return Negocio(
+          id: json['id'],
+          nombre: json['name'],
+          imagenUrl: json['image_url'],
+          calificacion: (json['rating'] as num).toDouble(),
+          tiempoEntregaMin: (json['delivery_time_minutes'] as num).toInt() - 5,
+          tiempoEntregaMax: (json['delivery_time_minutes'] as num).toInt() + 5,
+          costoEnvio: (json['delivery_fee'] as num).toDouble(),
+          categoria: json['category'],
+          ciudad: 'Tilarán',
+          esDestacado: json['is_featured'] ?? false,
+          activo: json['is_open'] ?? true,
+        );
       }).toList();
     } catch (e) {
-      // En caso de error, devolvemos datos de ejemplo
-      return [
-        Negocio(
-          id: '1',
-          nombre: 'Restaurante El Buen Sabor',
-          imagenUrl: 'https://picsum.photos/200/300',
-          calificacion: 4.5,
-          tiempoEntregaMin: 25,
-          tiempoEntregaMax: 35,
-          costoEnvio: 1500,
-          categoria: 'Restaurante',
-          ciudad: 'Tilarán',
-          esDestacado: true,
-          activo: true,
-        ),
-        Negocio(
-          id: '2',
-          nombre: 'Supermercado La Esquina',
-          imagenUrl: 'https://picsum.photos/200/300',
-          calificacion: 4.2,
-          tiempoEntregaMin: 15,
-          tiempoEntregaMax: 25,
-          costoEnvio: 1200,
-          categoria: 'Supermercado',
-          ciudad: 'Tilarán',
-          esDestacado: true,
-          activo: true,
-        ),
-      ];
+      throw Exception('Error al obtener negocios destacados: ${e.toString()}');
     }
   }
 }

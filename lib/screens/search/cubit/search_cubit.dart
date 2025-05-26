@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/repositories/store_repository.dart';
+import '../../../core/models/store.dart';
 import 'search_state.dart';
 
 class SearchCubit extends Cubit<SearchState> {
@@ -12,13 +13,20 @@ class SearchCubit extends Cubit<SearchState> {
   Future<void> init() async {
     emit(state.copyWith(isLoading: true, errorMessage: null));
     try {
-      final stores = await _storeRepository.getStores();
+      // Cargar todas las tiendas desde la base de datos
+      List<Store> stores = await _storeRepository.getStores();
+
+      // Cargar las tiendas destacadas
+      List<Store> featuredStores = await _storeRepository.getFeaturedStores();
+
+      // Obtener categorías únicas
       final Set<String> uniqueCategories =
           stores.map((store) => store.category).toSet();
 
       emit(
         state.copyWith(
           stores: stores,
+          featuredStores: featuredStores,
           categories: uniqueCategories.toList(),
           isLoading: false,
         ),
@@ -26,7 +34,7 @@ class SearchCubit extends Cubit<SearchState> {
     } catch (e) {
       emit(
         state.copyWith(
-          errorMessage: 'Error al cargar tiendas: ${e.toString()}',
+          errorMessage: e.toString().replaceAll('Exception: ', ''),
           isLoading: false,
         ),
       );
@@ -44,12 +52,14 @@ class SearchCubit extends Cubit<SearchState> {
     );
 
     try {
-      final stores = await _storeRepository.searchStores(query);
+      // Buscar tiendas usando el repositorio
+      List<Store> stores = await _storeRepository.searchStores(query);
+
       emit(state.copyWith(stores: stores, isLoading: false));
     } catch (e) {
       emit(
         state.copyWith(
-          errorMessage: 'Error al buscar tiendas: ${e.toString()}',
+          errorMessage: e.toString().replaceAll('Exception: ', ''),
           isLoading: false,
         ),
       );
@@ -66,7 +76,8 @@ class SearchCubit extends Cubit<SearchState> {
     );
 
     try {
-      final stores =
+      // Filtrar tiendas por categoría
+      List<Store> stores =
           category.isEmpty
               ? await _storeRepository.getStores()
               : await _storeRepository.getStoresByCategory(category);
@@ -75,7 +86,7 @@ class SearchCubit extends Cubit<SearchState> {
     } catch (e) {
       emit(
         state.copyWith(
-          errorMessage: 'Error al filtrar tiendas: ${e.toString()}',
+          errorMessage: e.toString().replaceAll('Exception: ', ''),
           isLoading: false,
         ),
       );

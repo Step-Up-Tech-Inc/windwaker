@@ -26,18 +26,47 @@ class HomeCubit extends Cubit<HomeState> {
       final String ciudad = await _locationService.getCurrentCity();
 
       // Cargar los negocios destacados específicamente para la sección "Tiendas populares"
-      final List<Negocio> negociosDestacados =
-          await _negociosRepository.getNegociosDestacados();
+      final List<Negocio> negociosDestacados;
+      try {
+        negociosDestacados = await _negociosRepository.getNegociosDestacados();
+      } catch (e) {
+        emit(
+          HomeState.error(
+            message: 'Error al cargar tiendas destacadas: ${e.toString()}',
+          ),
+        );
+        return;
+      }
 
-      // Si no hay destacados, cargamos todos para no mostrar una sección vacía
-      final List<Negocio> negociosParaMostrar =
-          negociosDestacados.isNotEmpty
-              ? negociosDestacados
-              : await _negociosRepository.getNegocios();
+      // Si no hay negocios destacados, intentamos cargar todos los negocios
+      List<Negocio> negociosParaMostrar = negociosDestacados;
+
+      if (negociosDestacados.isEmpty) {
+        try {
+          negociosParaMostrar = await _negociosRepository.getNegocios();
+        } catch (e) {
+          emit(
+            HomeState.error(
+              message: 'Error al cargar tiendas: ${e.toString()}',
+            ),
+          );
+          return;
+        }
+      }
+
+      if (negociosParaMostrar.isEmpty) {
+        emit(
+          HomeState.error(
+            message:
+                'No hay tiendas disponibles en este momento. Por favor, inténtelo más tarde.',
+          ),
+        );
+        return;
+      }
 
       emit(HomeState.loaded(ciudad: ciudad, negocios: negociosParaMostrar));
     } catch (error) {
-      emit(HomeState.error(message: error.toString()));
+      emit(HomeState.error(message: 'Error: ${error.toString()}'));
     }
   }
 }

@@ -206,8 +206,8 @@ class SupabaseProductRepository implements ProductRepositoryInterface {
       );
       final allProducts = <Map<String, dynamic>>[];
 
-      // Productos para supermercado (ID: 3)
-      final supermercadoId = '3';
+      // Productos para supermercado
+      final supermercadoId = '00000000-0000-0000-0000-000000000003';
       final supermercadoProducts = [
         {
           'id': _uuid.v4(),
@@ -244,8 +244,8 @@ class SupabaseProductRepository implements ProductRepositoryInterface {
       ];
       allProducts.addAll(supermercadoProducts);
 
-      // Productos para restaurante (ID: 1)
-      final restauranteId = '1';
+      // Productos para restaurante
+      final restauranteId = '00000000-0000-0000-0000-000000000001';
       final restauranteProducts = [
         {
           'id': _uuid.v4(),
@@ -282,8 +282,8 @@ class SupabaseProductRepository implements ProductRepositoryInterface {
       ];
       allProducts.addAll(restauranteProducts);
 
-      // Productos para farmacia (ID: 2)
-      final farmaciaId = '2';
+      // Productos para farmacia
+      final farmaciaId = '00000000-0000-0000-0000-000000000002';
       final farmaciaProducts = [
         {
           'id': _uuid.v4(),
@@ -351,16 +351,6 @@ class SupabaseProductRepository implements ProductRepositoryInterface {
       _logger.e('Error al crear datos de muestra: $e');
       // Verificar si la tabla existe
       try {
-        // Verificamos si existe el esquema marketplace
-        final schemaExists =
-            await _supabaseClient
-                .rpc(
-                  'check_table_exists',
-                  params: {'table_name': 'information_schema.schemata'},
-                )
-                .select();
-        _logger.i('Resultado verificación esquema: $schemaExists');
-
         // Verificamos si existe la tabla products
         final tableExists =
             await _supabaseClient
