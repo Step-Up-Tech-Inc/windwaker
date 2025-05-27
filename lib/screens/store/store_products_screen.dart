@@ -45,6 +45,7 @@ class _StoreProductsView extends HookWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cubit = context.read<StoreProductsCubit>();
+    final scrollController = useScrollController();
 
     useEffect(() {
       cubit.initialize();
@@ -53,112 +54,150 @@ class _StoreProductsView extends HookWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              storeName,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+      body: NestedScrollView(
+        controller: scrollController,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              expandedHeight: 120.0,
+              floating: false,
+              pinned: true,
+              elevation: 0,
+              backgroundColor: Colors.white,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                onPressed: () => Navigator.of(context).pop(),
               ),
-            ),
-            BlocBuilder<StoreProductsCubit, StoreProductsState>(
-              builder: (context, state) {
-                return Row(
-                  children: [
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '4.6',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(' (150+ reseñas)', style: theme.textTheme.bodyMedium),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16.0),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.access_time, size: 16, color: Colors.black87),
-                const SizedBox(width: 4),
-                Text(
-                  '15-25 min',
-                  style: theme.textTheme.bodyMedium?.copyWith(
+              flexibleSpace: FlexibleSpaceBar(
+                title: Text(
+                  storeName,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color:
+                        innerBoxIsScrolled
+                            ? Colors.black87
+                            : Colors.transparent,
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 8),
-          BlocBuilder<StoreProductsCubit, StoreProductsState>(
-            builder: (context, state) {
-              return CategorySelector(
-                categories: state.categories,
-                selectedCategory: state.selectedCategory,
-                onCategorySelected: (category) {
-                  cubit.selectCategory(category);
-                },
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: BlocBuilder<StoreProductsCubit, StoreProductsState>(
-              builder: (context, state) {
-                if (state.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (state.error != null) {
-                  return Center(
-                    child: Text(
-                      'Error: ${state.error}',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.red,
+                background: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 56.0,
+                    top: 40.0,
+                    right: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        storeName,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
-                    ),
-                  );
-                }
-
-                if (state.products.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No hay productos disponibles',
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  );
-                }
-
-                return _buildProductSection(context, state);
-              },
+                      const SizedBox(height: 4),
+                      BlocBuilder<StoreProductsCubit, StoreProductsState>(
+                        builder: (context, state) {
+                          return Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '4.6',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                ' (150+ reseñas)',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.access_time,
+                                      size: 16,
+                                      color: Colors.black87,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '15-25 min',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SliverCategoryDelegate(
+                child: BlocBuilder<StoreProductsCubit, StoreProductsState>(
+                  builder: (context, state) {
+                    return CategorySelector(
+                      categories: state.categories,
+                      selectedCategory: state.selectedCategory,
+                      onCategorySelected: (category) {
+                        cubit.selectCategory(category);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ];
+        },
+        body: BlocBuilder<StoreProductsCubit, StoreProductsState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (state.error != null) {
+              return Center(
+                child: Text(
+                  'Error: ${state.error}',
+                  style: theme.textTheme.bodyLarge?.copyWith(color: Colors.red),
+                ),
+              );
+            }
+
+            if (state.products.isEmpty) {
+              return Center(
+                child: Text(
+                  'No hay productos disponibles',
+                  style: theme.textTheme.bodyLarge,
+                ),
+              );
+            }
+
+            return _buildProductSection(context, state);
+          },
+        ),
       ),
       bottomNavigationBar: BlocBuilder<StoreProductsCubit, StoreProductsState>(
         buildWhen:
@@ -256,69 +295,69 @@ class _StoreProductsView extends HookWidget {
 
     switch (category) {
       case 'Frutas':
-        headerText = 'Fresh fruits';
-        subtitleText = 'Fresh fruits and vegetables';
+        headerText = 'Frutas frescas';
+        subtitleText = 'Frutas y verduras frescas';
         headerIcon = Icons.eco;
         break;
       case 'Verduras':
-        headerText = 'Fresh vegetables';
-        subtitleText = 'Fresh vegetables';
+        headerText = 'Verduras frescas';
+        subtitleText = 'Verduras frescas';
         headerIcon = Icons.grass;
         break;
       case 'Lácteos':
-        headerText = 'Dairy products';
-        subtitleText = 'Milk, cheese and more';
+        headerText = 'Productos lácteos';
+        subtitleText = 'Leche, queso y más';
         headerIcon = Icons.egg;
         break;
       case 'Carnes':
-        headerText = 'Meat products';
-        subtitleText = 'Fresh meat and poultry';
+        headerText = 'Productos cárnicos';
+        subtitleText = 'Carne y aves frescas';
         headerIcon = Icons.restaurant;
         break;
       case 'Hamburguesas':
-        headerText = 'Hamburgers';
-        subtitleText = 'Delicious burgers';
+        headerText = 'Hamburguesas';
+        subtitleText = 'Deliciosas hamburguesas';
         headerIcon = Icons.lunch_dining;
         break;
       case 'Pizzas':
         headerText = 'Pizzas';
-        subtitleText = 'Italian style pizzas';
+        subtitleText = 'Pizzas al estilo italiano';
         headerIcon = Icons.local_pizza;
         break;
       case 'Acompañamientos':
-        headerText = 'Side dishes';
-        subtitleText = 'Perfect companions';
+        headerText = 'Acompañamientos';
+        subtitleText = 'Complementos perfectos';
         headerIcon = Icons.dining;
         break;
       case 'Bebidas':
-        headerText = 'Drinks';
-        subtitleText = 'Refreshing drinks';
+        headerText = 'Bebidas';
+        subtitleText = 'Bebidas refrescantes';
         headerIcon = Icons.local_drink;
         break;
       case 'Medicamentos':
-        headerText = 'Medicines';
-        subtitleText = 'Health products';
+        headerText = 'Medicamentos';
+        subtitleText = 'Productos de salud';
         headerIcon = Icons.medication;
         break;
       case 'Primeros Auxilios':
-        headerText = 'First aid';
-        subtitleText = 'Emergency products';
+        headerText = 'Primeros auxilios';
+        subtitleText = 'Productos de emergencia';
         headerIcon = Icons.healing;
         break;
       case 'Suplementos':
-        headerText = 'Supplements';
-        subtitleText = 'Vitamins and supplements';
+        headerText = 'Suplementos';
+        subtitleText = 'Vitaminas y suplementos';
         headerIcon = Icons.fitness_center;
         break;
       default:
         if (category == 'Todos') {
-          headerText = 'All products';
-          subtitleText = 'Browse all categories';
+          headerText = 'Todos los productos';
+          subtitleText = 'Explorar todas las categorías';
           headerIcon = Icons.category;
         } else {
           // Para cualquier otra categoría no definida explícitamente
           headerText = category;
-          subtitleText = 'Products in this category';
+          subtitleText = 'Productos en esta categoría';
           headerIcon = Icons.shopping_bag;
         }
     }
@@ -382,5 +421,35 @@ class _StoreProductsView extends HookWidget {
       case ProductStatus.outOfStock:
         return const AvailabilityBadge(text: 'Agotado', color: Colors.red);
     }
+  }
+}
+
+class _SliverCategoryDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _SliverCategoryDelegate({required this.child});
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: child,
+    );
+  }
+
+  @override
+  double get maxExtent => 60.0;
+
+  @override
+  double get minExtent => 60.0;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return false;
   }
 }
