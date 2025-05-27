@@ -20,6 +20,7 @@ mixin _$SearchState {
   String get searchQuery => throw _privateConstructorUsedError;
   String get selectedCategory => throw _privateConstructorUsedError;
   List<Store> get stores => throw _privateConstructorUsedError;
+  List<Store> get featuredStores => throw _privateConstructorUsedError;
   List<String> get categories => throw _privateConstructorUsedError;
   bool get isLoading => throw _privateConstructorUsedError;
   String? get errorMessage => throw _privateConstructorUsedError;
@@ -42,6 +43,7 @@ abstract class $SearchStateCopyWith<$Res> {
     String searchQuery,
     String selectedCategory,
     List<Store> stores,
+    List<Store> featuredStores,
     List<String> categories,
     bool isLoading,
     String? errorMessage,
@@ -66,6 +68,7 @@ class _$SearchStateCopyWithImpl<$Res, $Val extends SearchState>
     Object? searchQuery = null,
     Object? selectedCategory = null,
     Object? stores = null,
+    Object? featuredStores = null,
     Object? categories = null,
     Object? isLoading = null,
     Object? errorMessage = freezed,
@@ -86,6 +89,11 @@ class _$SearchStateCopyWithImpl<$Res, $Val extends SearchState>
                 null == stores
                     ? _value.stores
                     : stores // ignore: cast_nullable_to_non_nullable
+                        as List<Store>,
+            featuredStores:
+                null == featuredStores
+                    ? _value.featuredStores
+                    : featuredStores // ignore: cast_nullable_to_non_nullable
                         as List<Store>,
             categories:
                 null == categories
@@ -121,6 +129,7 @@ abstract class _$$SearchStateImplCopyWith<$Res>
     String searchQuery,
     String selectedCategory,
     List<Store> stores,
+    List<Store> featuredStores,
     List<String> categories,
     bool isLoading,
     String? errorMessage,
@@ -144,6 +153,7 @@ class __$$SearchStateImplCopyWithImpl<$Res>
     Object? searchQuery = null,
     Object? selectedCategory = null,
     Object? stores = null,
+    Object? featuredStores = null,
     Object? categories = null,
     Object? isLoading = null,
     Object? errorMessage = freezed,
@@ -164,6 +174,11 @@ class __$$SearchStateImplCopyWithImpl<$Res>
             null == stores
                 ? _value._stores
                 : stores // ignore: cast_nullable_to_non_nullable
+                    as List<Store>,
+        featuredStores:
+            null == featuredStores
+                ? _value._featuredStores
+                : featuredStores // ignore: cast_nullable_to_non_nullable
                     as List<Store>,
         categories:
             null == categories
@@ -192,10 +207,12 @@ class _$SearchStateImpl implements _SearchState {
     this.searchQuery = '',
     this.selectedCategory = '',
     final List<Store> stores = const [],
+    final List<Store> featuredStores = const [],
     final List<String> categories = const [],
     this.isLoading = false,
     this.errorMessage,
   }) : _stores = stores,
+       _featuredStores = featuredStores,
        _categories = categories;
 
   @override
@@ -211,6 +228,15 @@ class _$SearchStateImpl implements _SearchState {
     if (_stores is EqualUnmodifiableListView) return _stores;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_stores);
+  }
+
+  final List<Store> _featuredStores;
+  @override
+  @JsonKey()
+  List<Store> get featuredStores {
+    if (_featuredStores is EqualUnmodifiableListView) return _featuredStores;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_featuredStores);
   }
 
   final List<String> _categories;
@@ -230,7 +256,7 @@ class _$SearchStateImpl implements _SearchState {
 
   @override
   String toString() {
-    return 'SearchState(searchQuery: $searchQuery, selectedCategory: $selectedCategory, stores: $stores, categories: $categories, isLoading: $isLoading, errorMessage: $errorMessage)';
+    return 'SearchState(searchQuery: $searchQuery, selectedCategory: $selectedCategory, stores: $stores, featuredStores: $featuredStores, categories: $categories, isLoading: $isLoading, errorMessage: $errorMessage)';
   }
 
   @override
@@ -243,6 +269,10 @@ class _$SearchStateImpl implements _SearchState {
             (identical(other.selectedCategory, selectedCategory) ||
                 other.selectedCategory == selectedCategory) &&
             const DeepCollectionEquality().equals(other._stores, _stores) &&
+            const DeepCollectionEquality().equals(
+              other._featuredStores,
+              _featuredStores,
+            ) &&
             const DeepCollectionEquality().equals(
               other._categories,
               _categories,
@@ -259,6 +289,7 @@ class _$SearchStateImpl implements _SearchState {
     searchQuery,
     selectedCategory,
     const DeepCollectionEquality().hash(_stores),
+    const DeepCollectionEquality().hash(_featuredStores),
     const DeepCollectionEquality().hash(_categories),
     isLoading,
     errorMessage,
@@ -278,6 +309,7 @@ abstract class _SearchState implements SearchState {
     final String searchQuery,
     final String selectedCategory,
     final List<Store> stores,
+    final List<Store> featuredStores,
     final List<String> categories,
     final bool isLoading,
     final String? errorMessage,
@@ -289,6 +321,8 @@ abstract class _SearchState implements SearchState {
   String get selectedCategory;
   @override
   List<Store> get stores;
+  @override
+  List<Store> get featuredStores;
   @override
   List<String> get categories;
   @override

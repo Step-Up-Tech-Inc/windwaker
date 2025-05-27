@@ -118,7 +118,7 @@ class StoreCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '₡${(store.deliveryFee * 500).toInt()} Envío',
+                          '₡${store.deliveryFee.toInt()} Envío',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],

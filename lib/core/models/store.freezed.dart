@@ -24,13 +24,23 @@ mixin _$Store {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String get description => throw _privateConstructorUsedError;
+  @JsonKey(name: 'image_url')
   String get imageUrl => throw _privateConstructorUsedError;
   String get category => throw _privateConstructorUsedError;
   double get rating => throw _privateConstructorUsedError;
+  @JsonKey(name: 'delivery_time_minutes')
   int get deliveryTimeMinutes => throw _privateConstructorUsedError;
+  @JsonKey(name: 'delivery_fee')
   double get deliveryFee => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_open')
   bool get isOpen => throw _privateConstructorUsedError;
   bool get isFavorite => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_featured')
+  bool get isFeatured => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
+  String? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
+  String? get updatedAt => throw _privateConstructorUsedError;
 
   /// Serializes this Store to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,13 +60,16 @@ abstract class $StoreCopyWith<$Res> {
     String id,
     String name,
     String description,
-    String imageUrl,
+    @JsonKey(name: 'image_url') String imageUrl,
     String category,
     double rating,
-    int deliveryTimeMinutes,
-    double deliveryFee,
-    bool isOpen,
+    @JsonKey(name: 'delivery_time_minutes') int deliveryTimeMinutes,
+    @JsonKey(name: 'delivery_fee') double deliveryFee,
+    @JsonKey(name: 'is_open') bool isOpen,
     bool isFavorite,
+    @JsonKey(name: 'is_featured') bool isFeatured,
+    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'updated_at') String? updatedAt,
   });
 }
 
@@ -85,6 +98,9 @@ class _$StoreCopyWithImpl<$Res, $Val extends Store>
     Object? deliveryFee = null,
     Object? isOpen = null,
     Object? isFavorite = null,
+    Object? isFeatured = null,
+    Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -138,6 +154,21 @@ class _$StoreCopyWithImpl<$Res, $Val extends Store>
                     ? _value.isFavorite
                     : isFavorite // ignore: cast_nullable_to_non_nullable
                         as bool,
+            isFeatured:
+                null == isFeatured
+                    ? _value.isFeatured
+                    : isFeatured // ignore: cast_nullable_to_non_nullable
+                        as bool,
+            createdAt:
+                freezed == createdAt
+                    ? _value.createdAt
+                    : createdAt // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            updatedAt:
+                freezed == updatedAt
+                    ? _value.updatedAt
+                    : updatedAt // ignore: cast_nullable_to_non_nullable
+                        as String?,
           )
           as $Val,
     );
@@ -156,13 +187,16 @@ abstract class _$$StoreImplCopyWith<$Res> implements $StoreCopyWith<$Res> {
     String id,
     String name,
     String description,
-    String imageUrl,
+    @JsonKey(name: 'image_url') String imageUrl,
     String category,
     double rating,
-    int deliveryTimeMinutes,
-    double deliveryFee,
-    bool isOpen,
+    @JsonKey(name: 'delivery_time_minutes') int deliveryTimeMinutes,
+    @JsonKey(name: 'delivery_fee') double deliveryFee,
+    @JsonKey(name: 'is_open') bool isOpen,
     bool isFavorite,
+    @JsonKey(name: 'is_featured') bool isFeatured,
+    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'updated_at') String? updatedAt,
   });
 }
 
@@ -190,6 +224,9 @@ class __$$StoreImplCopyWithImpl<$Res>
     Object? deliveryFee = null,
     Object? isOpen = null,
     Object? isFavorite = null,
+    Object? isFeatured = null,
+    Object? createdAt = freezed,
+    Object? updatedAt = freezed,
   }) {
     return _then(
       _$StoreImpl(
@@ -243,6 +280,21 @@ class __$$StoreImplCopyWithImpl<$Res>
                 ? _value.isFavorite
                 : isFavorite // ignore: cast_nullable_to_non_nullable
                     as bool,
+        isFeatured:
+            null == isFeatured
+                ? _value.isFeatured
+                : isFeatured // ignore: cast_nullable_to_non_nullable
+                    as bool,
+        createdAt:
+            freezed == createdAt
+                ? _value.createdAt
+                : createdAt // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        updatedAt:
+            freezed == updatedAt
+                ? _value.updatedAt
+                : updatedAt // ignore: cast_nullable_to_non_nullable
+                    as String?,
       ),
     );
   }
@@ -251,17 +303,20 @@ class __$$StoreImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$StoreImpl implements _Store {
-  const _$StoreImpl({
+  _$StoreImpl({
     required this.id,
     required this.name,
     required this.description,
-    required this.imageUrl,
+    @JsonKey(name: 'image_url') required this.imageUrl,
     required this.category,
     required this.rating,
-    required this.deliveryTimeMinutes,
-    required this.deliveryFee,
-    required this.isOpen,
+    @JsonKey(name: 'delivery_time_minutes') required this.deliveryTimeMinutes,
+    @JsonKey(name: 'delivery_fee') required this.deliveryFee,
+    @JsonKey(name: 'is_open') required this.isOpen,
     this.isFavorite = false,
+    @JsonKey(name: 'is_featured') this.isFeatured = false,
+    @JsonKey(name: 'created_at') this.createdAt,
+    @JsonKey(name: 'updated_at') this.updatedAt,
   });
 
   factory _$StoreImpl.fromJson(Map<String, dynamic> json) =>
@@ -274,24 +329,37 @@ class _$StoreImpl implements _Store {
   @override
   final String description;
   @override
+  @JsonKey(name: 'image_url')
   final String imageUrl;
   @override
   final String category;
   @override
   final double rating;
   @override
+  @JsonKey(name: 'delivery_time_minutes')
   final int deliveryTimeMinutes;
   @override
+  @JsonKey(name: 'delivery_fee')
   final double deliveryFee;
   @override
+  @JsonKey(name: 'is_open')
   final bool isOpen;
   @override
   @JsonKey()
   final bool isFavorite;
+  @override
+  @JsonKey(name: 'is_featured')
+  final bool isFeatured;
+  @override
+  @JsonKey(name: 'created_at')
+  final String? createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  final String? updatedAt;
 
   @override
   String toString() {
-    return 'Store(id: $id, name: $name, description: $description, imageUrl: $imageUrl, category: $category, rating: $rating, deliveryTimeMinutes: $deliveryTimeMinutes, deliveryFee: $deliveryFee, isOpen: $isOpen, isFavorite: $isFavorite)';
+    return 'Store(id: $id, name: $name, description: $description, imageUrl: $imageUrl, category: $category, rating: $rating, deliveryTimeMinutes: $deliveryTimeMinutes, deliveryFee: $deliveryFee, isOpen: $isOpen, isFavorite: $isFavorite, isFeatured: $isFeatured, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -314,7 +382,13 @@ class _$StoreImpl implements _Store {
                 other.deliveryFee == deliveryFee) &&
             (identical(other.isOpen, isOpen) || other.isOpen == isOpen) &&
             (identical(other.isFavorite, isFavorite) ||
-                other.isFavorite == isFavorite));
+                other.isFavorite == isFavorite) &&
+            (identical(other.isFeatured, isFeatured) ||
+                other.isFeatured == isFeatured) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -331,6 +405,9 @@ class _$StoreImpl implements _Store {
     deliveryFee,
     isOpen,
     isFavorite,
+    isFeatured,
+    createdAt,
+    updatedAt,
   );
 
   /// Create a copy of Store
@@ -348,17 +425,21 @@ class _$StoreImpl implements _Store {
 }
 
 abstract class _Store implements Store {
-  const factory _Store({
+  factory _Store({
     required final String id,
     required final String name,
     required final String description,
-    required final String imageUrl,
+    @JsonKey(name: 'image_url') required final String imageUrl,
     required final String category,
     required final double rating,
+    @JsonKey(name: 'delivery_time_minutes')
     required final int deliveryTimeMinutes,
-    required final double deliveryFee,
-    required final bool isOpen,
+    @JsonKey(name: 'delivery_fee') required final double deliveryFee,
+    @JsonKey(name: 'is_open') required final bool isOpen,
     final bool isFavorite,
+    @JsonKey(name: 'is_featured') final bool isFeatured,
+    @JsonKey(name: 'created_at') final String? createdAt,
+    @JsonKey(name: 'updated_at') final String? updatedAt,
   }) = _$StoreImpl;
 
   factory _Store.fromJson(Map<String, dynamic> json) = _$StoreImpl.fromJson;
@@ -370,19 +451,32 @@ abstract class _Store implements Store {
   @override
   String get description;
   @override
+  @JsonKey(name: 'image_url')
   String get imageUrl;
   @override
   String get category;
   @override
   double get rating;
   @override
+  @JsonKey(name: 'delivery_time_minutes')
   int get deliveryTimeMinutes;
   @override
+  @JsonKey(name: 'delivery_fee')
   double get deliveryFee;
   @override
+  @JsonKey(name: 'is_open')
   bool get isOpen;
   @override
   bool get isFavorite;
+  @override
+  @JsonKey(name: 'is_featured')
+  bool get isFeatured;
+  @override
+  @JsonKey(name: 'created_at')
+  String? get createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  String? get updatedAt;
 
   /// Create a copy of Store
   /// with the given fields replaced by the non-null parameter values.

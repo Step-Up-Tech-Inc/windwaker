@@ -17,6 +17,9 @@ _$StoreImpl _$$StoreImplFromJson(Map<String, dynamic> json) => _$StoreImpl(
   deliveryFee: (json['delivery_fee'] as num).toDouble(),
   isOpen: json['is_open'] as bool,
   isFavorite: json['is_favorite'] as bool? ?? false,
+  isFeatured: json['is_featured'] as bool? ?? false,
+  createdAt: json['created_at'] as String?,
+  updatedAt: json['updated_at'] as String?,
 );
 
 Map<String, dynamic> _$$StoreImplToJson(_$StoreImpl instance) =>
@@ -31,4 +34,7 @@ Map<String, dynamic> _$$StoreImplToJson(_$StoreImpl instance) =>
       'delivery_fee': instance.deliveryFee,
       'is_open': instance.isOpen,
       'is_favorite': instance.isFavorite,
+      'is_featured': instance.isFeatured,
+      'created_at': instance.createdAt,
+      'updated_at': instance.updatedAt,
     };

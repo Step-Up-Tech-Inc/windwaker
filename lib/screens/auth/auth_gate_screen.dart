@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import 'package:windwaker/screens/auth/widgets/social_login_buttons.dart';
 
 class AuthGateScreen extends StatefulWidget {
   const AuthGateScreen({super.key});
@@ -15,6 +13,7 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
   bool showLogin = false;
   bool showRegister = false;
   bool _checkedSession = false;
+  // ignore: prefer_final_fields
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -32,43 +31,6 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
     } else {
       setState(() {
         _checkedSession = true;
-      });
-    }
-  }
-
-  Future<void> _handleFacebookLogin() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final LoginResult result = await FacebookAuth.instance.login();
-      if (result.status == LoginStatus.success) {
-        // ignore: unused_local_variable
-        final AccessToken accessToken = result.accessToken!;
-
-        // Aquí se integraría con Supabase para autenticar con el token de Facebook
-        // Ejemplo (adaptar según la implementación específica de Supabase):
-        // await Supabase.instance.client.auth.signInWithIdToken(
-        //   provider: Provider.facebook,
-        //   idToken: accessToken.token,
-        // );
-
-        if (!mounted) return;
-        context.go('/location-permission');
-      } else {
-        setState(() {
-          _errorMessage = 'Error al iniciar sesión con Facebook';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Error: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
       });
     }
   }
@@ -167,19 +129,6 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                                 ),
                               ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'o',
-                    style: TextStyle(color: Colors.grey, fontSize: 18),
-                  ),
-                  const SizedBox(height: 20),
-                  SocialLoginButtons(
-                    onFacebookPressed: _handleFacebookLogin,
-                    onGooglePressed: () {
-                      // Implementar login con Google
-                    },
-                    onApplePressed: null, // No disponible aún
                   ),
                   if (_errorMessage != null)
                     Padding(

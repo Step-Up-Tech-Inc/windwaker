@@ -87,12 +87,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verificar código'),
-        backgroundColor: const Color(0xFF2979FF),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -105,12 +99,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   const SizedBox(height: 32),
                   const Icon(Icons.sms, size: 64, color: Color(0xFF2979FF)),
                   const SizedBox(height: 24),
+                  const Text(
+                    'Verificar código',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
                   Text(
                     'Ingresa el código que recibiste por SMS',
                     style: const TextStyle(
                       color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 18,
                     ),
                     textAlign: TextAlign.center,
                   ),
