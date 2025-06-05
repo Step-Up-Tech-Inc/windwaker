@@ -21,21 +21,39 @@ mixin _$HomeState {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(String ciudad, List<Negocio> negocios) loaded,
+    required TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )
+    loaded,
     required TResult Function(String message) error,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult? Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult? Function(String message)? error,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
   }) => throw _privateConstructorUsedError;
@@ -128,7 +146,13 @@ class _$InitialImpl implements _Initial {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(String ciudad, List<Negocio> negocios) loaded,
+    required TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )
+    loaded,
     required TResult Function(String message) error,
   }) {
     return initial();
@@ -139,7 +163,13 @@ class _$InitialImpl implements _Initial {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult? Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult? Function(String message)? error,
   }) {
     return initial?.call();
@@ -150,7 +180,13 @@ class _$InitialImpl implements _Initial {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
   }) {
@@ -247,7 +283,13 @@ class _$LoadingImpl implements _Loading {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(String ciudad, List<Negocio> negocios) loaded,
+    required TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )
+    loaded,
     required TResult Function(String message) error,
   }) {
     return loading();
@@ -258,7 +300,13 @@ class _$LoadingImpl implements _Loading {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult? Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult? Function(String message)? error,
   }) {
     return loading?.call();
@@ -269,7 +317,13 @@ class _$LoadingImpl implements _Loading {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
   }) {
@@ -328,7 +382,12 @@ abstract class _$$LoadedImplCopyWith<$Res> {
     $Res Function(_$LoadedImpl) then,
   ) = __$$LoadedImplCopyWithImpl<$Res>;
   @useResult
-  $Res call({String ciudad, List<Negocio> negocios});
+  $Res call({
+    String ciudad,
+    List<Negocio> negocios,
+    List<CartItem> cartItems,
+    double cartTotal,
+  });
 }
 
 /// @nodoc
@@ -344,7 +403,12 @@ class __$$LoadedImplCopyWithImpl<$Res>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? ciudad = null, Object? negocios = null}) {
+  $Res call({
+    Object? ciudad = null,
+    Object? negocios = null,
+    Object? cartItems = null,
+    Object? cartTotal = null,
+  }) {
     return _then(
       _$LoadedImpl(
         ciudad:
@@ -357,6 +421,16 @@ class __$$LoadedImplCopyWithImpl<$Res>
                 ? _value._negocios
                 : negocios // ignore: cast_nullable_to_non_nullable
                     as List<Negocio>,
+        cartItems:
+            null == cartItems
+                ? _value._cartItems
+                : cartItems // ignore: cast_nullable_to_non_nullable
+                    as List<CartItem>,
+        cartTotal:
+            null == cartTotal
+                ? _value.cartTotal
+                : cartTotal // ignore: cast_nullable_to_non_nullable
+                    as double,
       ),
     );
   }
@@ -368,7 +442,10 @@ class _$LoadedImpl implements _Loaded {
   const _$LoadedImpl({
     required this.ciudad,
     required final List<Negocio> negocios,
-  }) : _negocios = negocios;
+    final List<CartItem> cartItems = const [],
+    this.cartTotal = 0.0,
+  }) : _negocios = negocios,
+       _cartItems = cartItems;
 
   @override
   final String ciudad;
@@ -380,9 +457,22 @@ class _$LoadedImpl implements _Loaded {
     return EqualUnmodifiableListView(_negocios);
   }
 
+  final List<CartItem> _cartItems;
+  @override
+  @JsonKey()
+  List<CartItem> get cartItems {
+    if (_cartItems is EqualUnmodifiableListView) return _cartItems;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_cartItems);
+  }
+
+  @override
+  @JsonKey()
+  final double cartTotal;
+
   @override
   String toString() {
-    return 'HomeState.loaded(ciudad: $ciudad, negocios: $negocios)';
+    return 'HomeState.loaded(ciudad: $ciudad, negocios: $negocios, cartItems: $cartItems, cartTotal: $cartTotal)';
   }
 
   @override
@@ -391,7 +481,13 @@ class _$LoadedImpl implements _Loaded {
         (other.runtimeType == runtimeType &&
             other is _$LoadedImpl &&
             (identical(other.ciudad, ciudad) || other.ciudad == ciudad) &&
-            const DeepCollectionEquality().equals(other._negocios, _negocios));
+            const DeepCollectionEquality().equals(other._negocios, _negocios) &&
+            const DeepCollectionEquality().equals(
+              other._cartItems,
+              _cartItems,
+            ) &&
+            (identical(other.cartTotal, cartTotal) ||
+                other.cartTotal == cartTotal));
   }
 
   @override
@@ -399,6 +495,8 @@ class _$LoadedImpl implements _Loaded {
     runtimeType,
     ciudad,
     const DeepCollectionEquality().hash(_negocios),
+    const DeepCollectionEquality().hash(_cartItems),
+    cartTotal,
   );
 
   /// Create a copy of HomeState
@@ -414,10 +512,16 @@ class _$LoadedImpl implements _Loaded {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(String ciudad, List<Negocio> negocios) loaded,
+    required TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )
+    loaded,
     required TResult Function(String message) error,
   }) {
-    return loaded(ciudad, negocios);
+    return loaded(ciudad, negocios, cartItems, cartTotal);
   }
 
   @override
@@ -425,10 +529,16 @@ class _$LoadedImpl implements _Loaded {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult? Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult? Function(String message)? error,
   }) {
-    return loaded?.call(ciudad, negocios);
+    return loaded?.call(ciudad, negocios, cartItems, cartTotal);
   }
 
   @override
@@ -436,12 +546,18 @@ class _$LoadedImpl implements _Loaded {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
   }) {
     if (loaded != null) {
-      return loaded(ciudad, negocios);
+      return loaded(ciudad, negocios, cartItems, cartTotal);
     }
     return orElse();
   }
@@ -488,10 +604,14 @@ abstract class _Loaded implements HomeState {
   const factory _Loaded({
     required final String ciudad,
     required final List<Negocio> negocios,
+    final List<CartItem> cartItems,
+    final double cartTotal,
   }) = _$LoadedImpl;
 
   String get ciudad;
   List<Negocio> get negocios;
+  List<CartItem> get cartItems;
+  double get cartTotal;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
@@ -573,7 +693,13 @@ class _$ErrorImpl implements _Error {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(String ciudad, List<Negocio> negocios) loaded,
+    required TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )
+    loaded,
     required TResult Function(String message) error,
   }) {
     return error(message);
@@ -584,7 +710,13 @@ class _$ErrorImpl implements _Error {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult? Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult? Function(String message)? error,
   }) {
     return error?.call(message);
@@ -595,7 +727,13 @@ class _$ErrorImpl implements _Error {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(String ciudad, List<Negocio> negocios)? loaded,
+    TResult Function(
+      String ciudad,
+      List<Negocio> negocios,
+      List<CartItem> cartItems,
+      double cartTotal,
+    )?
+    loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
   }) {

@@ -102,7 +102,26 @@ class StoreProductsCubit extends Cubit<StoreProductsState> {
       final cartItems = await _cartRepository.getCartItemsByStore(_storeId);
       final cartTotal = await _cartRepository.getCartTotal();
 
-      emit(state.copyWith(cartItems: cartItems, cartTotal: cartTotal));
+      // Asegurarse de que incluso si el carrito está vacío, el estado se actualice correctamente
+      if (cartItems.isEmpty) {
+        emit(
+          state.copyWith(
+            cartItems: [],
+            cartTotal: 0.0,
+            hasItemsFromOtherStore: false, // Restablecer el estado de conflicto
+            pendingProductToAdd: null, // Limpiar producto pendiente
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            cartItems: cartItems,
+            cartTotal: cartTotal,
+            hasItemsFromOtherStore: false, // Restablecer el estado de conflicto
+            pendingProductToAdd: null, // Limpiar producto pendiente
+          ),
+        );
+      }
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -110,6 +129,31 @@ class StoreProductsCubit extends Cubit<StoreProductsState> {
 
   Future<void> addToCart(Product product) async {
     try {
+      // Primero obtenemos todos los items del carrito (no solo los de esta tienda)
+      final allCartItems = await _cartRepository.getCartItems();
+
+      // Verificamos si hay productos de otras tiendas
+      final otherStoreItems =
+          allCartItems
+              .where(
+                (item) => item.storeId != _storeId && item.storeId.isNotEmpty,
+              )
+              .toList();
+
+      // Si hay productos de otras tiendas, notificamos esto en el estado
+      if (otherStoreItems.isNotEmpty) {
+        final otherStoreId = otherStoreItems.first.storeId;
+        emit(
+          state.copyWith(
+            hasItemsFromOtherStore: true,
+            otherStoreId: otherStoreId,
+            pendingProductToAdd: product,
+          ),
+        );
+        return;
+      }
+
+      // Si no hay conflicto, procedemos normalmente
       final cartItem = CartItem(
         id: '',
         productId: product.id,
@@ -200,5 +244,77 @@ class StoreProductsCubit extends Cubit<StoreProductsState> {
 
   void selectCategory(String category) {
     loadProductsByCategory(category);
+  }
+
+  // Método para confirmar el reemplazo del carrito
+  Future<void> confirmReplaceCart() async {
+    try {
+      // Obtener el producto pendiente
+      final product = state.pendingProductToAdd;
+      if (product == null) {
+        // No hay producto pendiente, simplemente limpiar el carrito existente
+        await _cartRepository.clearCart();
+        await loadCartItems();
+
+        // Limpiar el estado de conflicto
+        emit(
+          state.copyWith(
+            hasItemsFromOtherStore: false,
+            otherStoreId: '',
+            pendingProductToAdd: null,
+          ),
+        );
+        return;
+      }
+
+      // Limpiar el carrito primero
+      await _cartRepository.clearCart();
+
+      // Agregar el nuevo producto
+      final cartItem = CartItem(
+        id: '',
+        productId: product.id,
+        productName: product.name,
+        imageUrl: product.imageUrl,
+        price: product.price,
+        unit: product.unit,
+        quantity: product.quantity,
+        storeId: product.storeId,
+      );
+
+      await _cartRepository.addToCart(cartItem);
+
+      // Recargar y actualizar el estado
+      await loadCartItems();
+
+      // Limpiar el estado de conflicto
+      emit(
+        state.copyWith(
+          hasItemsFromOtherStore: false,
+          otherStoreId: '',
+          pendingProductToAdd: null,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          error: 'Error al reemplazar el carrito: ${e.toString()}',
+          hasItemsFromOtherStore: false,
+          otherStoreId: '',
+          pendingProductToAdd: null,
+        ),
+      );
+    }
+  }
+
+  // Método para cancelar el reemplazo del carrito
+  void cancelReplaceCart() {
+    emit(
+      state.copyWith(
+        hasItemsFromOtherStore: false,
+        otherStoreId: '',
+        pendingProductToAdd: null,
+      ),
+    );
   }
 }

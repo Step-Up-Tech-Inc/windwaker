@@ -5,12 +5,13 @@ import 'package:get_it/get_it.dart';
 import '../../core/models/product.dart';
 import '../../core/repositories/product_repository_interface.dart';
 import '../../core/repositories/cart_repository.dart';
+import '../cart/cart_screen.dart';
 import 'cubit/store_products_cubit.dart';
 import 'cubit/store_products_state.dart';
 import 'widgets/product_card.dart';
 import 'widgets/category_selector.dart';
-import 'widgets/cart_bottom_sheet.dart';
 import 'widgets/availability_badge.dart';
+import 'product_detail_screen.dart';
 
 class StoreProductsScreen extends HookWidget {
   final String storeId;
@@ -31,31 +32,75 @@ class StoreProductsScreen extends HookWidget {
             cartRepository: GetIt.I<CartRepository>(),
             storeId: storeId,
           )..initialize(),
-      child: _StoreProductsView(storeName: storeName),
+      child: _StoreProductsView(storeName: storeName, storeId: storeId),
     );
   }
 }
 
-class _StoreProductsView extends HookWidget {
+class _StoreProductsView extends StatefulWidget {
   final String storeName;
+  final String storeId;
 
-  const _StoreProductsView({required this.storeName});
+  const _StoreProductsView({required this.storeName, required this.storeId});
+
+  @override
+  State<_StoreProductsView> createState() => _StoreProductsViewState();
+}
+
+class _StoreProductsViewState extends State<_StoreProductsView>
+    with WidgetsBindingObserver {
+  late StoreProductsCubit _cubit;
+  late ScrollController _scrollController;
+  bool _dialogShown =
+      false; // Bandera para controlar si ya se mostró el diálogo
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit = context.read<StoreProductsCubit>();
+    _scrollController = ScrollController();
+
+    // Inicializar el cubit
+    _cubit.initialize();
+
+    // Registrar el observer para actualizar cuando la app vuelva al primer plano
+    WidgetsBinding.instance.addObserver(this);
+
+    // Para detectar cuando la pantalla recibe el foco de nuevo
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _cubit.loadCartItems();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      // Actualizar el carrito cuando la app vuelve al primer plano
+      setState(() {
+        _dialogShown =
+            false; // Resetear la bandera para permitir que el diálogo aparezca si es necesario
+      });
+      _cubit.loadCartItems();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cubit = context.read<StoreProductsCubit>();
-    final scrollController = useScrollController();
-
-    useEffect(() {
-      cubit.initialize();
-      return null;
-    }, []);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: NestedScrollView(
-        controller: scrollController,
+        controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
@@ -70,7 +115,7 @@ class _StoreProductsView extends HookWidget {
               ),
               flexibleSpace: FlexibleSpaceBar(
                 title: Text(
-                  storeName,
+                  widget.storeName,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color:
@@ -89,7 +134,7 @@ class _StoreProductsView extends HookWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        storeName,
+                        widget.storeName,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -162,7 +207,7 @@ class _StoreProductsView extends HookWidget {
                       categories: state.categories,
                       selectedCategory: state.selectedCategory,
                       onCategorySelected: (category) {
-                        cubit.selectCategory(category);
+                        _cubit.selectCategory(category);
                       },
                     );
                   },
@@ -171,7 +216,33 @@ class _StoreProductsView extends HookWidget {
             ),
           ];
         },
-        body: BlocBuilder<StoreProductsCubit, StoreProductsState>(
+        body: BlocConsumer<StoreProductsCubit, StoreProductsState>(
+          listenWhen: (previous, current) {
+            // Solo escuchar cuando hay cambios en estos estados específicos
+            final hasErrorChange =
+                previous.error != current.error && current.error != null;
+            final hasConflictChange =
+                !previous.hasItemsFromOtherStore &&
+                current.hasItemsFromOtherStore;
+            return hasErrorChange || hasConflictChange;
+          },
+          listener: (context, state) {
+            // Mostrar diálogo si hay productos de otra tienda y no se ha mostrado el diálogo aún
+            if (state.hasItemsFromOtherStore && !_dialogShown) {
+              _dialogShown = true; // Marcar que ya se mostró
+              _showStoreConflictDialog(context, state);
+            }
+
+            // Mostrar errores
+            if (state.error != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error!),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
           builder: (context, state) {
             if (state.isLoading) {
               return const Center(child: CircularProgressIndicator());
@@ -209,46 +280,64 @@ class _StoreProductsView extends HookWidget {
             return const SizedBox.shrink();
           }
 
-          return CartBottomSheet(
-            itemCount: state.cartItems.length,
-            total: state.cartTotal,
-            cartItems: state.cartItems,
-            onRemoveItem: (itemId) {
-              // Primero actualizamos el estado
-              context.read<StoreProductsCubit>().removeFromCart(itemId);
-
-              // Mostrar feedback al usuario
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Producto eliminado del carrito'),
-                  duration: Duration(seconds: 1),
+          final formattedTotal = '₡${state.cartTotal.toInt()}';
+          return SafeArea(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              child: ElevatedButton(
+                onPressed: () {
+                  // Navegar a la nueva pantalla del carrito
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => CartScreen(
+                            storeId: widget.storeId,
+                            storeName: widget.storeName,
+                            storeCategory: 'Tienda', // Puedes ajustar esto
+                            storeRating: 4.6, // Puedes ajustar esto
+                            deliveryTime: '15-25 min', // Puedes ajustar esto
+                          ),
+                    ),
+                  ).then((_) {
+                    // Recargar datos del carrito al volver
+                    if (mounted) {
+                      _cubit.loadCartItems();
+                    }
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              );
-            },
-            onClearCart: () {
-              context.read<StoreProductsCubit>().clearCart();
-
-              // Mostrar feedback al usuario
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Carrito vaciado correctamente'),
-                  duration: Duration(seconds: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.shopping_cart, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${state.cartItems.length} ${state.cartItems.length == 1 ? 'item' : 'items'} - $formattedTotal',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Ver carrito',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
-              );
-
-              // No navegamos aquí, solo actualizamos el estado
-            },
-            onCheckout: () {
-              // Aquí se implementará la lógica de checkout
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Funcionalidad de checkout en desarrollo'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+              ),
+            ),
           );
         },
       ),
@@ -394,8 +483,6 @@ class _StoreProductsView extends HookWidget {
   }
 
   Widget _buildProductItem(BuildContext context, Product product) {
-    final cubit = context.read<StoreProductsCubit>();
-
     return ProductCard(
       name: product.name,
       imageUrl: product.imageUrl,
@@ -404,7 +491,29 @@ class _StoreProductsView extends HookWidget {
       quantity: product.quantity,
       availabilityBadge: _getAvailabilityBadge(product.status),
       onAddToCart: () {
-        cubit.addToCart(product);
+        // Resetear la bandera de diálogo antes de intentar agregar al carrito
+        setState(() {
+          _dialogShown = false;
+        });
+        _cubit.addToCart(product);
+      },
+      onTap: () {
+        // Navegar a la pantalla de detalle del producto
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => ProductDetailScreen(
+                  product: product,
+                  storeName: widget.storeName,
+                  storeCategory:
+                      'Tienda', // Aquí podrías obtener la categoría real
+                  storeRating: 4.6, // Aquí podrías obtener el rating real
+                  deliveryTime:
+                      '15-25 min', // Aquí podrías obtener el tiempo real
+                ),
+          ),
+        );
       },
     );
   }
@@ -421,6 +530,50 @@ class _StoreProductsView extends HookWidget {
       case ProductStatus.outOfStock:
         return const AvailabilityBadge(text: 'Agotado', color: Colors.red);
     }
+  }
+
+  // Método para mostrar el diálogo de conflicto entre tiendas
+  void _showStoreConflictDialog(
+    BuildContext context,
+    StoreProductsState state,
+  ) {
+    // Evitar mostrar el diálogo múltiples veces
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (dialogContext) => AlertDialog(
+              title: const Text('Cambiar de tienda'),
+              content: Text(
+                'Tienes productos de otra tienda en tu carrito. '
+                'Si continúas, tu carrito actual será eliminado y se '
+                'iniciará uno nuevo con este producto.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _cubit.cancelReplaceCart();
+                    _dialogShown = false; // Resetear la bandera
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _cubit.confirmReplaceCart();
+                    _dialogShown = false; // Resetear la bandera
+                    Navigator.of(dialogContext).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                  ),
+                  child: const Text('Continuar'),
+                ),
+              ],
+            ),
+      );
+    });
   }
 }
 

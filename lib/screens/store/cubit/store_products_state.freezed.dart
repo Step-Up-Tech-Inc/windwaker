@@ -23,7 +23,11 @@ mixin _$StoreProductsState {
   List<CartItem> get cartItems => throw _privateConstructorUsedError;
   String get selectedCategory => throw _privateConstructorUsedError;
   List<String> get categories => throw _privateConstructorUsedError;
-  double get cartTotal => throw _privateConstructorUsedError;
+  double get cartTotal =>
+      throw _privateConstructorUsedError; // Propiedades para manejar conflictos entre tiendas
+  bool get hasItemsFromOtherStore => throw _privateConstructorUsedError;
+  String get otherStoreId => throw _privateConstructorUsedError;
+  Product? get pendingProductToAdd => throw _privateConstructorUsedError;
 
   /// Create a copy of StoreProductsState
   /// with the given fields replaced by the non-null parameter values.
@@ -47,7 +51,12 @@ abstract class $StoreProductsStateCopyWith<$Res> {
     String selectedCategory,
     List<String> categories,
     double cartTotal,
+    bool hasItemsFromOtherStore,
+    String otherStoreId,
+    Product? pendingProductToAdd,
   });
+
+  $ProductCopyWith<$Res>? get pendingProductToAdd;
 }
 
 /// @nodoc
@@ -72,6 +81,9 @@ class _$StoreProductsStateCopyWithImpl<$Res, $Val extends StoreProductsState>
     Object? selectedCategory = null,
     Object? categories = null,
     Object? cartTotal = null,
+    Object? hasItemsFromOtherStore = null,
+    Object? otherStoreId = null,
+    Object? pendingProductToAdd = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -110,9 +122,38 @@ class _$StoreProductsStateCopyWithImpl<$Res, $Val extends StoreProductsState>
                     ? _value.cartTotal
                     : cartTotal // ignore: cast_nullable_to_non_nullable
                         as double,
+            hasItemsFromOtherStore:
+                null == hasItemsFromOtherStore
+                    ? _value.hasItemsFromOtherStore
+                    : hasItemsFromOtherStore // ignore: cast_nullable_to_non_nullable
+                        as bool,
+            otherStoreId:
+                null == otherStoreId
+                    ? _value.otherStoreId
+                    : otherStoreId // ignore: cast_nullable_to_non_nullable
+                        as String,
+            pendingProductToAdd:
+                freezed == pendingProductToAdd
+                    ? _value.pendingProductToAdd
+                    : pendingProductToAdd // ignore: cast_nullable_to_non_nullable
+                        as Product?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of StoreProductsState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ProductCopyWith<$Res>? get pendingProductToAdd {
+    if (_value.pendingProductToAdd == null) {
+      return null;
+    }
+
+    return $ProductCopyWith<$Res>(_value.pendingProductToAdd!, (value) {
+      return _then(_value.copyWith(pendingProductToAdd: value) as $Val);
+    });
   }
 }
 
@@ -133,7 +174,13 @@ abstract class _$$StoreProductsStateImplCopyWith<$Res>
     String selectedCategory,
     List<String> categories,
     double cartTotal,
+    bool hasItemsFromOtherStore,
+    String otherStoreId,
+    Product? pendingProductToAdd,
   });
+
+  @override
+  $ProductCopyWith<$Res>? get pendingProductToAdd;
 }
 
 /// @nodoc
@@ -157,6 +204,9 @@ class __$$StoreProductsStateImplCopyWithImpl<$Res>
     Object? selectedCategory = null,
     Object? categories = null,
     Object? cartTotal = null,
+    Object? hasItemsFromOtherStore = null,
+    Object? otherStoreId = null,
+    Object? pendingProductToAdd = freezed,
   }) {
     return _then(
       _$StoreProductsStateImpl(
@@ -195,6 +245,21 @@ class __$$StoreProductsStateImplCopyWithImpl<$Res>
                 ? _value.cartTotal
                 : cartTotal // ignore: cast_nullable_to_non_nullable
                     as double,
+        hasItemsFromOtherStore:
+            null == hasItemsFromOtherStore
+                ? _value.hasItemsFromOtherStore
+                : hasItemsFromOtherStore // ignore: cast_nullable_to_non_nullable
+                    as bool,
+        otherStoreId:
+            null == otherStoreId
+                ? _value.otherStoreId
+                : otherStoreId // ignore: cast_nullable_to_non_nullable
+                    as String,
+        pendingProductToAdd:
+            freezed == pendingProductToAdd
+                ? _value.pendingProductToAdd
+                : pendingProductToAdd // ignore: cast_nullable_to_non_nullable
+                    as Product?,
       ),
     );
   }
@@ -211,6 +276,9 @@ class _$StoreProductsStateImpl implements _StoreProductsState {
     this.selectedCategory = 'Todos',
     final List<String> categories = const ['Todos'],
     this.cartTotal = 0.0,
+    this.hasItemsFromOtherStore = false,
+    this.otherStoreId = '',
+    this.pendingProductToAdd,
   }) : _products = products,
        _cartItems = cartItems,
        _categories = categories;
@@ -254,10 +322,19 @@ class _$StoreProductsStateImpl implements _StoreProductsState {
   @override
   @JsonKey()
   final double cartTotal;
+  // Propiedades para manejar conflictos entre tiendas
+  @override
+  @JsonKey()
+  final bool hasItemsFromOtherStore;
+  @override
+  @JsonKey()
+  final String otherStoreId;
+  @override
+  final Product? pendingProductToAdd;
 
   @override
   String toString() {
-    return 'StoreProductsState(isLoading: $isLoading, error: $error, products: $products, cartItems: $cartItems, selectedCategory: $selectedCategory, categories: $categories, cartTotal: $cartTotal)';
+    return 'StoreProductsState(isLoading: $isLoading, error: $error, products: $products, cartItems: $cartItems, selectedCategory: $selectedCategory, categories: $categories, cartTotal: $cartTotal, hasItemsFromOtherStore: $hasItemsFromOtherStore, otherStoreId: $otherStoreId, pendingProductToAdd: $pendingProductToAdd)';
   }
 
   @override
@@ -280,7 +357,13 @@ class _$StoreProductsStateImpl implements _StoreProductsState {
               _categories,
             ) &&
             (identical(other.cartTotal, cartTotal) ||
-                other.cartTotal == cartTotal));
+                other.cartTotal == cartTotal) &&
+            (identical(other.hasItemsFromOtherStore, hasItemsFromOtherStore) ||
+                other.hasItemsFromOtherStore == hasItemsFromOtherStore) &&
+            (identical(other.otherStoreId, otherStoreId) ||
+                other.otherStoreId == otherStoreId) &&
+            (identical(other.pendingProductToAdd, pendingProductToAdd) ||
+                other.pendingProductToAdd == pendingProductToAdd));
   }
 
   @override
@@ -293,6 +376,9 @@ class _$StoreProductsStateImpl implements _StoreProductsState {
     selectedCategory,
     const DeepCollectionEquality().hash(_categories),
     cartTotal,
+    hasItemsFromOtherStore,
+    otherStoreId,
+    pendingProductToAdd,
   );
 
   /// Create a copy of StoreProductsState
@@ -316,6 +402,9 @@ abstract class _StoreProductsState implements StoreProductsState {
     final String selectedCategory,
     final List<String> categories,
     final double cartTotal,
+    final bool hasItemsFromOtherStore,
+    final String otherStoreId,
+    final Product? pendingProductToAdd,
   }) = _$StoreProductsStateImpl;
 
   @override
@@ -331,7 +420,13 @@ abstract class _StoreProductsState implements StoreProductsState {
   @override
   List<String> get categories;
   @override
-  double get cartTotal;
+  double get cartTotal; // Propiedades para manejar conflictos entre tiendas
+  @override
+  bool get hasItemsFromOtherStore;
+  @override
+  String get otherStoreId;
+  @override
+  Product? get pendingProductToAdd;
 
   /// Create a copy of StoreProductsState
   /// with the given fields replaced by the non-null parameter values.

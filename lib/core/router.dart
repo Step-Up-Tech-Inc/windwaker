@@ -12,6 +12,7 @@ import '../screens/auth/complete_profile_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/store/test_store_screen.dart';
+import '../screens/cart/cart_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../screens/home/cubit/home_cubit.dart';
 import 'config/di_config.dart';
@@ -99,6 +100,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/test-store',
         builder: (context, state) => const TestStoreScreen(),
+      ),
+      GoRoute(
+        path: '/cart',
+        builder: (context, state) {
+          final String? storeId = state.uri.queryParameters['storeId'];
+          final String storeName = state.uri.queryParameters['storeName'] ?? '';
+          final String storeCategory =
+              state.uri.queryParameters['storeCategory'] ?? '';
+          final double storeRating =
+              double.tryParse(state.uri.queryParameters['storeRating'] ?? '') ??
+              4.5;
+          final String deliveryTime =
+              state.uri.queryParameters['deliveryTime'] ?? '20-30 min';
+
+          return CartScreen(
+            storeId: storeId,
+            storeName: storeName,
+            storeCategory: storeCategory,
+            storeRating: storeRating,
+            deliveryTime: deliveryTime,
+          );
+        },
       ),
     ],
   );

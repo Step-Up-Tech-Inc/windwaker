@@ -7,6 +7,8 @@ class HomeState with _$HomeState {
   const factory HomeState.loaded({
     required String ciudad,
     required List<Negocio> negocios,
+    @Default([]) List<CartItem> cartItems,
+    @Default(0.0) double cartTotal,
   }) = _Loaded;
   const factory HomeState.error({required String message}) = _Error;
 }
