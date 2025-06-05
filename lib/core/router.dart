@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/auth/auth_gate_screen.dart';
 import '../screens/splash/location_permission_screen.dart';
+import '../screens/splash/app_intro_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../screens/auth/phone_login_screen.dart';
 import '../screens/auth/otp_verification_screen.dart';
@@ -27,6 +28,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/location-permission',
         builder: (context, state) => const LocationPermissionScreen(),
+      ),
+      GoRoute(
+        path: '/app-intro',
+        builder: (context, state) => const AppIntroScreen(),
       ),
       GoRoute(
         path: '/email-verification',
