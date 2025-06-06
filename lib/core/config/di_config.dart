@@ -54,6 +54,7 @@ Future<void> setupDependencies() async {
     () => HomeCubit(
       negociosRepository: getIt<NegociosRepository>(),
       locationService: getIt<LocationService>(),
+      cartRepository: getIt<CartRepository>(),
     ),
   );
 }

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/models/negocio.dart';
+import '../../core/models/cart_item.dart';
 import 'cubit/home_cubit.dart';
 import 'widgets/promotion_carousel.dart';
 import 'widgets/category_carousel.dart';
 import '../search/widgets/bottom_navigation.dart';
 import 'package:go_router/go_router.dart';
 import '../store/store_products_screen.dart';
+import '../cart/cart_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -399,16 +401,313 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            // Botón de notificaciones
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // Sin funcionalidad por ahora
-              },
+            // Botones de acción
+            Row(
+              children: [
+                // Botón del carrito
+                BlocBuilder<HomeCubit, HomeState>(
+                  buildWhen: (previous, current) {
+                    // Verificar estado del carrito
+                    if (previous.maybeMap(
+                              loaded: (loaded) => loaded,
+                              orElse: () => null,
+                            ) !=
+                            null &&
+                        current.maybeMap(
+                              loaded: (loaded) => loaded,
+                              orElse: () => null,
+                            ) !=
+                            null) {
+                      final previousLoaded =
+                          previous.maybeMap(
+                            loaded: (state) => state,
+                            orElse: () => null,
+                          )!;
+                      final currentLoaded =
+                          current.maybeMap(
+                            loaded: (state) => state,
+                            orElse: () => null,
+                          )!;
+
+                      return previousLoaded.cartItems.length !=
+                              currentLoaded.cartItems.length ||
+                          previousLoaded.cartTotal != currentLoaded.cartTotal;
+                    }
+                    return false;
+                  },
+                  builder: (context, state) {
+                    // Extraer estado cargado si existe
+                    final loadedState = state.maybeMap(
+                      loaded: (loaded) => loaded,
+                      orElse: () => null,
+                    );
+
+                    if (loadedState != null &&
+                        loadedState.cartItems.isNotEmpty) {
+                      return Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.shopping_cart_outlined),
+                            onPressed: () {
+                              // Mostrar diálogo con contenido del carrito
+                              _showCartDialog(
+                                context,
+                                loadedState.cartItems,
+                                loadedState.cartTotal,
+                              );
+                            },
+                          ),
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '${loadedState.cartItems.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return IconButton(
+                      icon: const Icon(Icons.shopping_cart_outlined),
+                      onPressed: () {
+                        // Mostrar diálogo indicando que el carrito está vacío
+                        _showEmptyCartDialog(context);
+                      },
+                    );
+                  },
+                ),
+                // Botón de notificaciones
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    // Sin funcionalidad por ahora
+                  },
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // Método para navegar al carrito de manera segura
+  void _navigateToCart(BuildContext context, String storeId, String storeName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => CartScreen(
+              storeId: storeId,
+              storeName: storeName,
+              storeCategory: 'Tienda',
+              storeRating: 4.6,
+              deliveryTime: '15-25 min',
+            ),
+      ),
+    ).then((_) {
+      // Verificar si el widget sigue montado antes de actualizar
+      if (mounted) {
+        // ignore: use_build_context_synchronously
+        context.read<HomeCubit>().loadCartItems();
+      }
+    });
+  }
+
+  void _showCartDialog(
+    BuildContext context,
+    List<CartItem> cartItems,
+    double cartTotal,
+  ) {
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.shopping_cart, color: theme.primaryColor),
+                const SizedBox(width: 8),
+                const Text('Tu Carrito'),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 300,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (cartItems.isNotEmpty) ...[
+                    const Text('Productos en tu carrito:'),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: cartItems.length,
+                        itemBuilder: (context, index) {
+                          final item = cartItems[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: _buildCartItemImage(item),
+                            ),
+                            title: Text(
+                              item.productName,
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              '${item.quantity.toInt()} x ₡${item.price.toInt()}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            trailing: Text(
+                              '₡${(item.quantity * item.price).toInt()}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Divider(color: Colors.grey[300]),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '₡${cartTotal.toInt()}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: theme.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cerrar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+
+                  if (cartItems.isNotEmpty) {
+                    final storeId = cartItems.first.storeId;
+                    final storeName =
+                        'Tienda'; // Aquí deberías obtener el nombre real
+
+                    _navigateToCart(context, storeId, storeName);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                ),
+                child: const Text('Ver carrito completo'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // Método para mostrar diálogo cuando el carrito está vacío
+  void _showEmptyCartDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Carrito Vacío'),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 48,
+                  color: Colors.grey,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Tu carrito está vacío',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Añade productos de cualquier tienda para comenzar a llenar tu carrito',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // Método para construir la imagen del ítem del carrito
+  Widget _buildCartItemImage(CartItem item) {
+    if (item.imageUrl.isNotEmpty) {
+      return Image.network(
+        item.imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildCartItemImagePlaceholder();
+        },
+      );
+    } else {
+      return _buildCartItemImagePlaceholder();
+    }
+  }
+
+  // Método para construir el placeholder de la imagen
+  Widget _buildCartItemImagePlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: const Icon(Icons.image, color: Colors.grey),
     );
   }
 }

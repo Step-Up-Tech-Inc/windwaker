@@ -14,5 +14,9 @@ class StoreProductsState with _$StoreProductsState {
     @Default('Todos') String selectedCategory,
     @Default(['Todos']) List<String> categories,
     @Default(0.0) double cartTotal,
+    // Propiedades para manejar conflictos entre tiendas
+    @Default(false) bool hasItemsFromOtherStore,
+    @Default('') String otherStoreId,
+    Product? pendingProductToAdd,
   }) = _StoreProductsState;
 }
