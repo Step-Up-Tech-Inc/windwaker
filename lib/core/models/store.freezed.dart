@@ -303,7 +303,7 @@ class __$$StoreImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$StoreImpl implements _Store {
-  _$StoreImpl({
+  const _$StoreImpl({
     required this.id,
     required this.name,
     required this.description,
@@ -425,7 +425,7 @@ class _$StoreImpl implements _Store {
 }
 
 abstract class _Store implements Store {
-  factory _Store({
+  const factory _Store({
     required final String id,
     required final String name,
     required final String description,

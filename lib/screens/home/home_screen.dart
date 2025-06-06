@@ -27,6 +27,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Recargar los datos del carrito cuando la pantalla recibe el foco
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<HomeCubit>().loadCartItems();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
@@ -406,35 +418,6 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Botón del carrito
                 BlocBuilder<HomeCubit, HomeState>(
-                  buildWhen: (previous, current) {
-                    // Verificar estado del carrito
-                    if (previous.maybeMap(
-                              loaded: (loaded) => loaded,
-                              orElse: () => null,
-                            ) !=
-                            null &&
-                        current.maybeMap(
-                              loaded: (loaded) => loaded,
-                              orElse: () => null,
-                            ) !=
-                            null) {
-                      final previousLoaded =
-                          previous.maybeMap(
-                            loaded: (state) => state,
-                            orElse: () => null,
-                          )!;
-                      final currentLoaded =
-                          current.maybeMap(
-                            loaded: (state) => state,
-                            orElse: () => null,
-                          )!;
-
-                      return previousLoaded.cartItems.length !=
-                              currentLoaded.cartItems.length ||
-                          previousLoaded.cartTotal != currentLoaded.cartTotal;
-                    }
-                    return false;
-                  },
                   builder: (context, state) {
                     // Extraer estado cargado si existe
                     final loadedState = state.maybeMap(
@@ -510,6 +493,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Método para navegar al carrito de manera segura
   void _navigateToCart(BuildContext context, String storeId, String storeName) {
+    // Guardar una referencia al cubit antes del gap asíncrono
+    final homeCubit = context.read<HomeCubit>();
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -525,8 +511,16 @@ class _HomeScreenState extends State<HomeScreen> {
     ).then((_) {
       // Verificar si el widget sigue montado antes de actualizar
       if (mounted) {
-        // ignore: use_build_context_synchronously
-        context.read<HomeCubit>().loadCartItems();
+        // Usar la referencia guardada en lugar de context.read
+        homeCubit.loadCartItems();
+
+        // Pequeño retraso para asegurar que la UI se actualice
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            // Forzar una actualización adicional por si acaso
+            homeCubit.loadCartItems();
+          }
+        });
       }
     });
   }
@@ -623,6 +617,10 @@ class _HomeScreenState extends State<HomeScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
+                  // Actualizar el carrito al cerrar el diálogo
+                  if (mounted) {
+                    context.read<HomeCubit>().loadCartItems();
+                  }
                 },
                 child: const Text('Cerrar'),
               ),
@@ -680,6 +678,10 @@ class _HomeScreenState extends State<HomeScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
+                  // Actualizar el carrito al cerrar el diálogo
+                  if (mounted) {
+                    context.read<HomeCubit>().loadCartItems();
+                  }
                 },
                 child: const Text('Cerrar'),
               ),

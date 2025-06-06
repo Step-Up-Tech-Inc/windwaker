@@ -98,7 +98,7 @@ class _ProductDetailViewState extends State<_ProductDetailView>
     final displayQuantity =
         widget.product.unit == 'g' || widget.product.unit == 'ml'
             ? '${widget.product.quantity.toInt()}${widget.product.unit}'
-            : '${widget.product.quantity}${widget.product.unit}';
+            : '${widget.product.quantity.toInt()}${widget.product.unit}';
 
     // Actualizar el carrito al construir la vista
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/cart_item.dart';
@@ -8,7 +9,16 @@ class CartRepository {
   final String _cartItemsKey = 'cart_items';
   final _uuid = const Uuid();
 
+  // Stream controller para notificar cambios en el carrito
+  final _cartChangedController = StreamController<bool>.broadcast();
+  Stream<bool> get cartChanged => _cartChangedController.stream;
+
   CartRepository(this._sharedPreferences);
+
+  // Método para notificar a los oyentes que el carrito ha cambiado
+  void notifyCartChanged() {
+    _cartChangedController.add(true);
+  }
 
   // Obtener todos los ítems del carrito
   Future<List<CartItem>> getCartItems() async {
@@ -59,6 +69,9 @@ class CartRepository {
           updatedCartItemsJson,
         );
 
+        // Notificar cambio
+        notifyCartChanged();
+
         return updatedItem;
       } else {
         // Nuevo producto en el carrito
@@ -71,6 +84,9 @@ class CartRepository {
             _sharedPreferences.getStringList(_cartItemsKey) ?? [];
         cartItemsJson.add(jsonEncode(newCartItem.toJson()));
         await _sharedPreferences.setStringList(_cartItemsKey, cartItemsJson);
+
+        // Notificar cambio
+        notifyCartChanged();
 
         return newCartItem;
       }
@@ -96,6 +112,9 @@ class CartRepository {
         _cartItemsKey,
         updatedCartItemsJson,
       );
+
+      // Notificar cambio
+      notifyCartChanged();
 
       return cartItem;
     } catch (e) {
@@ -125,6 +144,10 @@ class CartRepository {
         _cartItemsKey,
         updatedCartItemsJson,
       );
+
+      // Notificar cambio
+      notifyCartChanged();
+
       return success;
     } catch (e) {
       return false;
@@ -135,6 +158,10 @@ class CartRepository {
   Future<bool> clearCart() async {
     try {
       final success = await _sharedPreferences.setStringList(_cartItemsKey, []);
+
+      // Notificar cambio
+      notifyCartChanged();
+
       return success;
     } catch (e) {
       return false;

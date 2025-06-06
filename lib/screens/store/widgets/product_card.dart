@@ -29,7 +29,7 @@ class ProductCard extends StatelessWidget {
     final displayQuantity =
         unit == 'g' || unit == 'ml'
             ? '${quantity.toInt()}$unit'
-            : '$quantity$unit';
+            : '${quantity.toInt()}$unit';
 
     return InkWell(
       onTap: onTap,

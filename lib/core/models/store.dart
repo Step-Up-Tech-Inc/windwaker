@@ -16,7 +16,7 @@ class Store with _$Store {
     @JsonKey(name: 'delivery_fee') required double deliveryFee,
     @JsonKey(name: 'is_open') required bool isOpen,
     @Default(false) bool isFavorite,
-    @JsonKey(name: 'is_featured') @Default(false) bool isFeatured,
+    @Default(false) @JsonKey(name: 'is_featured') bool isFeatured,
     @JsonKey(name: 'created_at') String? createdAt,
     @JsonKey(name: 'updated_at') String? updatedAt,
   }) = _Store;
