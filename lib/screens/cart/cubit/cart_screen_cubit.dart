@@ -98,6 +98,12 @@ class CartScreenCubit extends Cubit<CartScreenState> {
           cartTotal: 0.0,
         ),
       );
+
+      // Notificar a otras partes de la app que el carrito está vacío
+      // Esto es una medida adicional por si la actualización regular falla
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _cartRepository.notifyCartChanged();
+      });
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }

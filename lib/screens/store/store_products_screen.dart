@@ -104,7 +104,7 @@ class _StoreProductsViewState extends State<_StoreProductsView>
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 120.0,
+              expandedHeight: 60.0, // Reducimos la altura
               floating: false,
               pinned: true,
               elevation: 0,
@@ -113,88 +113,88 @@ class _StoreProductsViewState extends State<_StoreProductsView>
                 icon: const Icon(Icons.arrow_back, color: Colors.black87),
                 onPressed: () => Navigator.of(context).pop(),
               ),
-              flexibleSpace: FlexibleSpaceBar(
-                title: Text(
-                  widget.storeName,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color:
-                        innerBoxIsScrolled
-                            ? Colors.black87
-                            : Colors.transparent,
-                  ),
-                ),
-                background: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 56.0,
-                    top: 40.0,
-                    right: 16.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+              title:
+                  innerBoxIsScrolled
+                      ? Text(
                         widget.storeName,
-                        style: theme.textTheme.titleLarge?.copyWith(
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
+                      )
+                      : null,
+            ),
+            SliverToBoxAdapter(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 16.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.storeName,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(height: 4),
-                      BlocBuilder<StoreProductsCubit, StoreProductsState>(
-                        builder: (context, state) {
-                          return Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.amber,
-                                size: 16,
+                    ),
+                    const SizedBox(height: 8),
+                    BlocBuilder<StoreProductsCubit, StoreProductsState>(
+                      builder: (context, state) {
+                        return Row(
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '4.6',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '4.6',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            Text(
+                              ' (150+ reseñas)',
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
                               ),
-                              Text(
-                                ' (150+ reseñas)',
-                                style: theme.textTheme.bodyMedium,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.access_time,
-                                      size: 16,
-                                      color: Colors.black87,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.access_time,
+                                    size: 16,
+                                    color: Colors.black87,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '15-25 min',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '15-25 min',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -356,7 +356,7 @@ class _StoreProductsViewState extends State<_StoreProductsView>
             child: _buildCategoryHeader(context, selectedCategory),
           ),
           SliverPadding(
-            padding: const EdgeInsets.only(bottom: 16.0),
+            padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -380,79 +380,69 @@ class _StoreProductsViewState extends State<_StoreProductsView>
 
     String headerText;
     String subtitleText;
-    IconData headerIcon;
 
     switch (category) {
       case 'Frutas':
         headerText = 'Frutas frescas';
         subtitleText = 'Frutas y verduras frescas';
-        headerIcon = Icons.eco;
         break;
       case 'Verduras':
         headerText = 'Verduras frescas';
         subtitleText = 'Verduras frescas';
-        headerIcon = Icons.grass;
         break;
       case 'Lácteos':
         headerText = 'Productos lácteos';
         subtitleText = 'Leche, queso y más';
-        headerIcon = Icons.egg;
         break;
       case 'Carnes':
         headerText = 'Productos cárnicos';
         subtitleText = 'Carne y aves frescas';
-        headerIcon = Icons.restaurant;
         break;
       case 'Hamburguesas':
         headerText = 'Hamburguesas';
         subtitleText = 'Deliciosas hamburguesas';
-        headerIcon = Icons.lunch_dining;
         break;
       case 'Pizzas':
         headerText = 'Pizzas';
         subtitleText = 'Pizzas al estilo italiano';
-        headerIcon = Icons.local_pizza;
         break;
       case 'Acompañamientos':
         headerText = 'Acompañamientos';
         subtitleText = 'Complementos perfectos';
-        headerIcon = Icons.dining;
         break;
       case 'Bebidas':
         headerText = 'Bebidas';
         subtitleText = 'Bebidas refrescantes';
-        headerIcon = Icons.local_drink;
         break;
       case 'Medicamentos':
         headerText = 'Medicamentos';
         subtitleText = 'Productos de salud';
-        headerIcon = Icons.medication;
         break;
       case 'Primeros Auxilios':
         headerText = 'Primeros auxilios';
         subtitleText = 'Productos de emergencia';
-        headerIcon = Icons.healing;
         break;
       case 'Suplementos':
         headerText = 'Suplementos';
         subtitleText = 'Vitaminas y suplementos';
-        headerIcon = Icons.fitness_center;
         break;
       default:
         if (category == 'Todos') {
           headerText = 'Todos los productos';
           subtitleText = 'Explorar todas las categorías';
-          headerIcon = Icons.category;
         } else {
           // Para cualquier otra categoría no definida explícitamente
           headerText = category;
           subtitleText = 'Productos en esta categoría';
-          headerIcon = Icons.shopping_bag;
         }
     }
 
-    return Padding(
+    return Container(
       padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -476,7 +466,6 @@ class _StoreProductsViewState extends State<_StoreProductsView>
               ],
             ),
           ),
-          Icon(headerIcon, size: 24, color: Colors.grey[700]),
         ],
       ),
     );
@@ -588,10 +577,30 @@ class _SliverCategoryDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: child,
+    // Calcular la opacidad basada en el desplazamiento
+    // shrinkOffset es mayor a 0 cuando hay scroll
+    final double opacity = shrinkOffset > 10 ? 1.0 : 0.0;
+
+    // Añadir sombra para dar sensación de profundidad cuando se hace scroll
+    return AnimatedOpacity(
+      opacity: opacity,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(
+                26,
+              ), // 0.1 aproximado en alpha (255 * 0.1 = 25.5)
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: child,
+      ),
     );
   }
 

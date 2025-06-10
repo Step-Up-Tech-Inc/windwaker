@@ -24,7 +24,13 @@ class HomeCubit extends Cubit<HomeState> {
   }) : _negociosRepository = negociosRepository,
        _locationService = locationService,
        _cartRepository = cartRepository,
-       super(const HomeState.initial());
+       super(const HomeState.initial()) {
+    // Suscribirse a los cambios del carrito
+    _cartRepository.cartChanged.listen((_) {
+      _logger.d('Notificación de cambio en el carrito recibida');
+      loadCartItems();
+    });
+  }
 
   Future<void> loadInitialData() async {
     emit(const HomeState.loading());
@@ -99,7 +105,12 @@ class HomeCubit extends Cubit<HomeState> {
       final List<CartItem> cartItems = await _cartRepository.getCartItems();
       final double cartTotal = await _cartRepository.getCartTotal();
 
-      // Actualizar el estado con los nuevos datos del carrito
+      _logger.d(
+        'Carrito actualizado: ${cartItems.length} elementos, total: $cartTotal',
+      );
+
+      // Forzar emisión de un nuevo estado para asegurar que la UI se actualice
+      // Utilizamos una copia del estado actual con los nuevos datos del carrito
       emit(
         _Loaded(
           ciudad: currentState.ciudad,
