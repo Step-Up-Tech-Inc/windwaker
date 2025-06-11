@@ -4,6 +4,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get_it/get_it.dart';
 import '../../core/models/cart_item.dart';
 import '../../core/repositories/cart_repository.dart';
+import '../checkout/checkout_screen.dart';
 import 'cubit/cart_screen_cubit.dart';
 import 'cubit/cart_screen_state.dart';
 import 'widgets/cart_item_card.dart';
@@ -188,10 +189,18 @@ class _CartScreenView extends HookWidget {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Procesando pago...'),
-                            duration: Duration(seconds: 2),
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder:
+                                (context) => CheckoutScreen(
+                                  cartItems: state.cartItems,
+                                  subtotal: state.subtotal,
+                                  tax: state.tax,
+                                  deliveryCost: state.deliveryCost,
+                                  discount: state.discount,
+                                  total: state.cartTotal,
+                                  storeName: state.storeName,
+                                ),
                           ),
                         );
                       },
