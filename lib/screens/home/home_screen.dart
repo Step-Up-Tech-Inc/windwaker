@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/models/negocio.dart';
 import '../../core/models/cart_item.dart';
+import '../../core/models/order.dart';
+import '../../core/services/order_service.dart';
 import 'cubit/home_cubit.dart';
+import 'widgets/order_status_banner.dart';
 import 'widgets/promotion_carousel.dart';
 import 'widgets/category_carousel.dart';
 import '../search/widgets/bottom_navigation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:get_it/get_it.dart';
 import '../store/store_products_screen.dart';
 import '../cart/cart_screen.dart';
 
@@ -19,11 +23,39 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _ubicacionExpandida = false;
+  Order? _activeOrder;
+  bool _isLoadingOrder = true;
 
   @override
   void initState() {
     super.initState();
     context.read<HomeCubit>().loadInitialData();
+    _loadActiveOrder();
+  }
+
+  Future<void> _loadActiveOrder() async {
+    setState(() {
+      _isLoadingOrder = true;
+    });
+
+    try {
+      final orderService = GetIt.I<OrderService>();
+      final order = await orderService.getActiveOrder();
+
+      if (mounted) {
+        setState(() {
+          _activeOrder = order;
+          _isLoadingOrder = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _activeOrder = null;
+          _isLoadingOrder = false;
+        });
+      }
+    }
   }
 
   @override
@@ -34,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<HomeCubit>().loadCartItems();
+        _loadActiveOrder();
       }
     });
   }
@@ -53,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: SelectableText.rich(
                       TextSpan(
                         text: 'Error: ${error.message}',
-                        style: TextStyle(color: Colors.red),
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
                   ),
@@ -73,6 +106,32 @@ class _HomeScreenState extends State<HomeScreen> {
     return CustomScrollView(
       slivers: [
         _buildCustomHeader(ciudad),
+
+        // Mostrar indicador de carga o el banner de pedido en camino
+        if (_isLoadingOrder)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          )
+        else if (_activeOrder != null &&
+            _activeOrder!.status != OrderStatus.delivered)
+          SliverToBoxAdapter(
+            child: OrderStatusBanner(
+              order: _activeOrder!,
+              onTap: () {
+                // Aquí se puede navegar a la pantalla de detalle del pedido
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Navegando a detalles del pedido...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ),
+
         if (_ubicacionExpandida)
           SliverToBoxAdapter(
             child: Padding(

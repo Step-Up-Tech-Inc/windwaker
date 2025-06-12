@@ -6,8 +6,10 @@ import '../repositories/negocios_repository.dart';
 import '../repositories/product_repository_interface.dart';
 import '../repositories/product_repository_factory.dart';
 import '../repositories/cart_repository.dart';
+import '../repositories/order_repository.dart';
 import '../services/location_service.dart';
 import '../services/app_intro_service.dart';
+import '../services/order_service.dart';
 import '../../screens/home/cubit/home_cubit.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -47,6 +49,13 @@ Future<void> setupDependencies() async {
 
   getIt.registerLazySingleton<CartRepository>(
     () => CartRepository(getIt<SharedPreferences>()),
+  );
+
+  // Repositorio y servicio de pedidos
+  getIt.registerLazySingleton<OrderRepository>(() => OrderRepository());
+
+  getIt.registerLazySingleton<OrderService>(
+    () => OrderService(getIt<OrderRepository>()),
   );
 
   // Cubits
