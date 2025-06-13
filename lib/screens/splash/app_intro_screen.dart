@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-//import '../../core/config/di_config.dart';
-//import '../../core/services/app_intro_service.dart';
+import '../../core/config/di_config.dart';
+import '../../core/services/app_intro_service.dart';
 
 class AppIntroScreen extends StatelessWidget {
   const AppIntroScreen({super.key});
@@ -104,8 +103,8 @@ class AppIntroScreen extends StatelessWidget {
   }
 
   Future<void> _continueToHome(BuildContext context) async {
-    // Temporalmente comentamos esta línea para permitir que la pantalla aparezca siempre
-    // await getIt<AppIntroService>().markIntroAsSeen();
+    // Marcar la introducción como vista
+    await getIt<AppIntroService>().markIntroAsSeen();
 
     // Navegar a la pantalla principal
     if (context.mounted) {

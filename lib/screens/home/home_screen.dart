@@ -121,13 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: OrderStatusBanner(
               order: _activeOrder!,
               onTap: () {
-                // Aquí se puede navegar a la pantalla de detalle del pedido
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Navegando a detalles del pedido...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                context.go('/order-tracking/${_activeOrder!.id}');
               },
             ),
           ),
