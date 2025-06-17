@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
-//import '../../core/config/di_config.dart';
-//import '../../core/services/app_intro_service.dart';
+import '../../core/config/di_config.dart';
+import '../../core/services/app_intro_service.dart';
 
 class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
@@ -103,17 +103,9 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
   }
 
   Future<void> _navigateToNextScreen() async {
-    // Temporalmente omitimos la verificación de si el usuario ya ha visto la intro
-    // y siempre navegamos a la pantalla de introducción
-    if (mounted) {
-      context.go('/app-intro');
-    }
-
-    // Código original comentado:
-    /*
     // Verificar si el usuario ya ha visto la pantalla de introducción
     final hasSeenIntro = await getIt<AppIntroService>().hasSeenIntro();
-    
+
     if (mounted) {
       if (!hasSeenIntro) {
         // Si no ha visto la intro, navegar a la pantalla de introducción
@@ -123,7 +115,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
         context.go('/home');
       }
     }
-    */
   }
 
   void _skipPermission() {

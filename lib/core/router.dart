@@ -16,6 +16,7 @@ import '../screens/cart/cart_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../screens/home/cubit/home_cubit.dart';
 import 'config/di_config.dart';
+import '../screens/order_tracking/order_tracking_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -121,6 +122,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             storeRating: storeRating,
             deliveryTime: deliveryTime,
           );
+        },
+      ),
+      GoRoute(
+        path: '/order-tracking/:orderId',
+        builder: (context, state) {
+          final String orderId = state.pathParameters['orderId'] ?? '';
+          return OrderTrackingScreen(key: UniqueKey(), orderId: orderId);
         },
       ),
     ],
