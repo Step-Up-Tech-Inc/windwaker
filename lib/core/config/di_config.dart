@@ -7,9 +7,12 @@ import '../repositories/product_repository_interface.dart';
 import '../repositories/product_repository_factory.dart';
 import '../repositories/cart_repository.dart';
 import '../repositories/order_repository.dart';
+import '../repositories/user_repository.dart';
 import '../services/location_service.dart';
 import '../services/app_intro_service.dart';
 import '../services/order_service.dart';
+import '../services/migration_service.dart';
+import '../services/auth_service.dart';
 import '../../screens/home/cubit/home_cubit.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -31,9 +34,30 @@ Future<void> setupDependencies() async {
   final supabaseClient = Supabase.instance.client;
   getIt.registerLazySingleton<SupabaseClient>(() => supabaseClient);
 
+  // Servicio de autenticación
+  getIt.registerLazySingleton<AuthService>(
+    () => AuthService(
+      prefs: getIt<SharedPreferences>(),
+      supabaseClient: getIt<SupabaseClient>(),
+    ),
+  );
+
+  // Servicio de migraciones
+  getIt.registerLazySingleton<MigrationService>(
+    () => MigrationService(supabaseClient: getIt<SupabaseClient>()),
+  );
+
+  // Ejecutar migraciones
+  await getIt<MigrationService>().runMigrations();
+
   // Repositorios
   getIt.registerLazySingleton<NegociosRepository>(
     () => NegociosRepository(supabaseClient: getIt<SupabaseClient>()),
+  );
+
+  // Repositorio de usuarios
+  getIt.registerLazySingleton<UserRepository>(
+    () => UserRepository(supabaseClient: getIt<SupabaseClient>()),
   );
 
   // Inicializar el factory de ProductRepository que elige entre local y remoto

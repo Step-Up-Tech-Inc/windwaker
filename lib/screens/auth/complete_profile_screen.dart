@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'widgets/social_login_buttons.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:windwaker/core/repositories/user_repository.dart';
+import 'package:windwaker/core/config/di_config.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -18,6 +21,28 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   String? _errorMessage;
   bool _isLoading = false;
   bool _success = false;
+  late final UserRepository _userRepository;
+  late final SharedPreferences _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _userRepository = getIt<UserRepository>();
+    _prefs = getIt<SharedPreferences>();
+    _loadSavedEmail();
+  }
+
+  void _loadSavedEmail() {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user?.email != null && user!.email!.isNotEmpty) {
+      _emailController.text = user.email!;
+    } else {
+      final savedEmail = _prefs.getString('user_email');
+      if (savedEmail != null) {
+        _emailController.text = savedEmail;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -43,20 +68,36 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     try {
       // Normalizar el correo electrónico: eliminar espacios y convertir a minúsculas
       final String email = _emailController.text.trim().toLowerCase();
+
+      // Guardar el email en SharedPreferences
+      await _prefs.setString('user_email', email);
+      debugPrint('Email guardado en SharedPreferences: $email');
+
       final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) {
-        // Solo para pruebas: permite avanzar igual
-        setState(() {
-          _success = true;
-        });
-        await Future.delayed(const Duration(milliseconds: 1200));
-        if (!mounted) return;
-        context.go('/location-permission');
-        return;
+      if (user != null) {
+        // Actualizar el email en Supabase Auth
+        try {
+          final authResponse = await Supabase.instance.client.auth.updateUser(
+            UserAttributes(email: email),
+          );
+          debugPrint('Email actualizado en Auth: ${authResponse.user?.email}');
+
+          // Crear o actualizar el perfil en la tabla profiles
+          final phone = _prefs.getString('user_phone');
+          await _userRepository.createOrUpdateUserProfile(
+            userId: user.id,
+            email: email,
+            phone: phone,
+          );
+          debugPrint('Perfil actualizado en la tabla profiles');
+        } catch (authError) {
+          debugPrint(
+            'Error al actualizar email en Auth (continuando de todos modos): $authError',
+          );
+        }
       }
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(email: email),
-      );
+
+      if (!mounted) return;
       setState(() {
         _success = true;
       });
@@ -64,17 +105,23 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       if (!mounted) return;
       context.go('/location-permission');
     } on AuthException catch (err) {
+      debugPrint('Error de autenticación: ${err.message}');
+      if (!mounted) return;
       setState(() {
         _errorMessage = err.message;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error inesperado: $e');
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'Ocurrió un error inesperado.';
+        _errorMessage = 'Ocurrió un error inesperado: $e';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -87,6 +134,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Inicio de sesión cancelado.';
         });
@@ -96,6 +144,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
       if (idToken == null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'No se pudo obtener el token de Google.';
         });
@@ -104,11 +153,31 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       final AuthResponse response = await Supabase.instance.client.auth
           .signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
       if (response.user == null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'No se pudo iniciar sesión con Google.';
         });
         return;
       }
+
+      // Guardar el email en SharedPreferences
+      if (response.user?.email != null) {
+        await _prefs.setString('user_email', response.user!.email!);
+        debugPrint(
+          'Email guardado en SharedPreferences: ${response.user!.email}',
+        );
+
+        // Crear o actualizar el perfil en la tabla profiles
+        final phone = _prefs.getString('user_phone');
+        await _userRepository.createOrUpdateUserProfile(
+          userId: response.user!.id,
+          email: response.user!.email,
+          phone: phone,
+        );
+        debugPrint('Perfil actualizado en la tabla profiles');
+      }
+
+      if (!mounted) return;
       setState(() {
         _success = true;
       });
@@ -116,17 +185,21 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       if (!mounted) return;
       context.go('/location-permission');
     } on AuthException catch (err) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = err.message;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Ocurrió un error inesperado.';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -139,6 +212,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     try {
       final LoginResult result = await FacebookAuth.instance.login();
       if (result.status != LoginStatus.success) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'No se pudo iniciar sesión con Facebook.';
         });
@@ -146,6 +220,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       }
       final String? accessToken = result.accessToken?.token;
       if (accessToken == null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'No se pudo obtener el token de Facebook.';
         });
@@ -157,11 +232,31 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
             idToken: accessToken,
           );
       if (response.user == null) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'No se pudo iniciar sesión con Facebook.';
         });
         return;
       }
+
+      // Guardar el email en SharedPreferences
+      if (response.user?.email != null) {
+        await _prefs.setString('user_email', response.user!.email!);
+        debugPrint(
+          'Email guardado en SharedPreferences: ${response.user!.email}',
+        );
+
+        // Crear o actualizar el perfil en la tabla profiles
+        final phone = _prefs.getString('user_phone');
+        await _userRepository.createOrUpdateUserProfile(
+          userId: response.user!.id,
+          email: response.user!.email,
+          phone: phone,
+        );
+        debugPrint('Perfil actualizado en la tabla profiles');
+      }
+
+      if (!mounted) return;
       setState(() {
         _success = true;
       });
@@ -169,17 +264,21 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       if (!mounted) return;
       context.go('/location-permission');
     } on AuthException catch (err) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = err.message;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Ocurrió un error inesperado.';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

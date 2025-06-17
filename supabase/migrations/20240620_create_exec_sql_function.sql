@@ -1,0 +1,14 @@
+-- Función para ejecutar SQL directamente
+CREATE OR REPLACE FUNCTION exec_sql(sql text)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  EXECUTE sql;
+  RETURN TRUE;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE;
+END;
+$$; 

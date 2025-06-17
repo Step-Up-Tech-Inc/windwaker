@@ -10,6 +10,7 @@ part 'order_tracking_cubit.freezed.dart';
 
 /// Cubit para manejar el estado de seguimiento de pedido.
 class OrderTrackingCubit extends Cubit<OrderTrackingState> {
+  // ignore: unused_field
   final OrderRepository _orderRepository;
 
   OrderTrackingCubit({OrderRepository? orderRepository})
@@ -135,6 +136,7 @@ class OrderTrackingCubit extends Cubit<OrderTrackingState> {
 
   // Método para construir el estado a partir de un objeto Order
   // Este método se usaría cuando se implemente la conexión real a la base de datos
+  // ignore: unused_element
   OrderTrackingState _buildOrderTrackingState(Order order) {
     // Convertir el estado de la orden a la lista de estados de seguimiento
     final List<OrderTrackingStatus> timeline = [];

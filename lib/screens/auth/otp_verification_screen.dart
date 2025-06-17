@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:windwaker/core/config/di_config.dart';
+import 'package:windwaker/core/repositories/user_repository.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phone;
@@ -15,6 +18,15 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   String? _errorMessage;
   bool _isLoading = false;
   bool _success = false;
+  late final SharedPreferences _prefs;
+  late final UserRepository _userRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefs = getIt<SharedPreferences>();
+    _userRepository = getIt<UserRepository>();
+  }
 
   @override
   void dispose() {
@@ -34,17 +46,43 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         setState(() {
           _success = true;
         });
+
+        // Guardar el teléfono en SharedPreferences
+        await _prefs.setString('user_phone', widget.phone);
+        debugPrint('Teléfono guardado en SharedPreferences: ${widget.phone}');
+
         await Future.delayed(const Duration(milliseconds: 1200));
         if (!mounted) return;
         final user = Supabase.instance.client.auth.currentUser;
         final String? email = user?.email;
+
+        if (user != null) {
+          // Actualizar el perfil en la tabla profiles
+          try {
+            await _userRepository.createOrUpdateUserProfile(
+              userId: user.id,
+              email: email,
+              phone: widget.phone,
+            );
+            debugPrint('Perfil actualizado en la tabla profiles');
+          } catch (e) {
+            debugPrint('Error al actualizar perfil: $e');
+          }
+        }
+
+        if (!mounted) return;
         if (email == null || email.isEmpty) {
           context.go('/complete-profile');
         } else {
+          // Si ya tiene email, guardarlo también
+          await _prefs.setString('user_email', email);
+          debugPrint('Email guardado en SharedPreferences: $email');
+          if (!mounted) return;
           context.go('/location-permission');
         }
         return;
       }
+
       final AuthResponse response = await Supabase.instance.client.auth
           .verifyOTP(
             type: OtpType.sms,
@@ -55,9 +93,35 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         setState(() {
           _success = true;
         });
+
+        // Guardar el teléfono en SharedPreferences
+        await _prefs.setString('user_phone', widget.phone);
+        debugPrint('Teléfono guardado en SharedPreferences: ${widget.phone}');
+
+        // Si hay email, guardarlo también
+        final user = response.user;
+        if (user?.email != null && user!.email!.isNotEmpty) {
+          await _prefs.setString('user_email', user.email!);
+          debugPrint('Email guardado en SharedPreferences: ${user.email}');
+        }
+
+        // Actualizar el perfil en la tabla profiles
+        if (user != null) {
+          try {
+            await _userRepository.createOrUpdateUserProfile(
+              userId: user.id,
+              email: user.email,
+              phone: widget.phone,
+            );
+            debugPrint('Perfil actualizado en la tabla profiles');
+          } catch (e) {
+            debugPrint('Error al actualizar perfil: $e');
+          }
+        }
+
         await Future.delayed(const Duration(milliseconds: 1200));
         if (!mounted) return;
-        final user = Supabase.instance.client.auth.currentUser;
+
         final String? email = user?.email;
         if (email == null || email.isEmpty) {
           context.go('/complete-profile');
@@ -78,9 +142,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         _errorMessage = 'Ocurrió un error inesperado.';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
