@@ -14,40 +14,12 @@ class MigrationService {
     try {
       _logger.i('Iniciando migraciones de base de datos...');
 
-      // Crear función para verificar si una tabla existe
-      await _createCheckTableExistsFunction();
-
       // Verificar y crear tabla de perfiles si no existe
       await _createProfilesTableIfNotExists();
 
       _logger.i('Migraciones completadas con éxito');
     } catch (e) {
       _logger.e('Error al ejecutar migraciones: $e');
-    }
-  }
-
-  /// Crea una función para verificar si una tabla existe
-  Future<void> _createCheckTableExistsFunction() async {
-    try {
-      _logger.i('Creando función check_table_exists...');
-
-      const String functionSQL = '''
-      CREATE OR REPLACE FUNCTION check_table_exists(table_name text)
-      RETURNS boolean AS \$\$
-      BEGIN
-        RETURN EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public'
-          AND table_name = \$1
-        );
-      END;
-      \$\$ LANGUAGE plpgsql SECURITY DEFINER;
-      ''';
-
-      await _supabaseClient.rpc('exec_sql', params: {'sql': functionSQL});
-      _logger.i('Función check_table_exists creada con éxito');
-    } catch (e) {
-      _logger.e('Error al crear función check_table_exists: $e');
     }
   }
 
@@ -61,48 +33,47 @@ class MigrationService {
       _logger.w('Tabla de perfiles no encontrada, creando...');
 
       try {
-        // Ejecutar SQL para crear la tabla
-        await _supabaseClient.rpc('create_profiles_table');
+        // Crear tabla directamente usando SQL
+        const String createTableSQL = '''
+        CREATE TABLE IF NOT EXISTS profiles (
+          id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+          email TEXT,
+          phone TEXT,
+          created_at TIMESTAMPTZ DEFAULT now(),
+          updated_at TIMESTAMPTZ DEFAULT now()
+        );
+        ''';
+
+        await _supabaseClient.rpc('exec_sql', params: {'sql': createTableSQL});
         _logger.i('Tabla de perfiles creada con éxito');
+
+        // Configurar políticas de seguridad
+        await _configureProfilesSecurity();
       } catch (createError) {
         _logger.e('Error al crear tabla de perfiles: $createError');
         // No lanzamos excepción para permitir que la app siga funcionando
-
-        // Intentar método alternativo
-        await _createProfilesTableDirectly();
       }
     }
   }
 
-  /// Crea la tabla de perfiles directamente con SQL
-  Future<void> _createProfilesTableDirectly() async {
+  /// Configura las políticas de seguridad para la tabla profiles
+  Future<void> _configureProfilesSecurity() async {
     try {
-      _logger.i('Intentando crear tabla de perfiles directamente con SQL...');
+      _logger.i('Configurando políticas de seguridad para profiles...');
 
-      // SQL para crear la tabla con sintaxis más simple
-      const String createTableSQL = '''
-      CREATE TABLE IF NOT EXISTS profiles (
-        id UUID PRIMARY KEY,
-        email TEXT,
-        phone TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      // Desactivar RLS temporalmente
+      await _supabaseClient.rpc(
+        'exec_sql',
+        params: {'sql': 'ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;'},
       );
-      ''';
 
-      // Ejecutar SQL
-      await _supabaseClient.rpc('exec_sql', params: {'sql': createTableSQL});
-      _logger.i('Tabla de perfiles creada directamente con SQL');
-
-      // Crear políticas de seguridad simplificadas
+      // Crear políticas de seguridad básicas
       const String policiesSQL = '''
-      -- Desactivar RLS temporalmente para permitir la creación inicial
-      ALTER TABLE IF EXISTS profiles DISABLE ROW LEVEL SECURITY;
-      
       -- Eliminar políticas existentes si hay
       DROP POLICY IF EXISTS "Permitir lectura pública de perfiles" ON profiles;
       DROP POLICY IF EXISTS "Permitir inserción de perfiles" ON profiles;
       DROP POLICY IF EXISTS "Permitir actualización de perfiles" ON profiles;
+      DROP POLICY IF EXISTS "Permitir todas las operaciones" ON profiles;
       
       -- Crear nuevas políticas simplificadas
       CREATE POLICY "Permitir todas las operaciones" ON profiles USING (true);
@@ -112,9 +83,9 @@ class MigrationService {
       ''';
 
       await _supabaseClient.rpc('exec_sql', params: {'sql': policiesSQL});
-      _logger.i('Políticas de seguridad simplificadas creadas');
+      _logger.i('Políticas de seguridad configuradas con éxito');
     } catch (e) {
-      _logger.e('Error al crear tabla de perfiles directamente: $e');
+      _logger.e('Error al configurar políticas de seguridad: $e');
     }
   }
 }

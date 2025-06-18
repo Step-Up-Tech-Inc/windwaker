@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:windwaker/core/config/di_config.dart';
 import 'package:windwaker/core/repositories/user_repository.dart';
+import 'package:logger/logger.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phone;
@@ -20,6 +21,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   bool _success = false;
   late final SharedPreferences _prefs;
   late final UserRepository _userRepository;
+  final _logger = Logger();
 
   @override
   void initState() {
@@ -47,41 +49,54 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           _success = true;
         });
 
+        _logger.i('Usando código bypass 000000 para pruebas');
+
+        // Intentar obtener usuario actual (podría ser null en modo bypass)
+        final user = Supabase.instance.client.auth.currentUser;
+
         // Guardar el teléfono en SharedPreferences
         await _prefs.setString('user_phone', widget.phone);
-        debugPrint('Teléfono guardado en SharedPreferences: ${widget.phone}');
+        _logger.i('Teléfono guardado en SharedPreferences: ${widget.phone}');
 
-        await Future.delayed(const Duration(milliseconds: 1200));
-        if (!mounted) return;
-        final user = Supabase.instance.client.auth.currentUser;
-        final String? email = user?.email;
-
+        // Actualizar el perfil en la tabla profiles si hay un usuario
         if (user != null) {
-          // Actualizar el perfil en la tabla profiles
           try {
+            _logger.i('Actualizando perfil para usuario: ${user.id}');
             await _userRepository.createOrUpdateUserProfile(
               userId: user.id,
-              email: email,
+              email: user.email,
               phone: widget.phone,
             );
-            debugPrint('Perfil actualizado en la tabla profiles');
+            _logger.i('Perfil actualizado en la tabla profiles');
           } catch (e) {
-            debugPrint('Error al actualizar perfil: $e');
+            _logger.e('Error al actualizar perfil: $e');
           }
-        }
 
-        if (!mounted) return;
-        if (email == null || email.isEmpty) {
-          context.go('/complete-profile');
-        } else {
-          // Si ya tiene email, guardarlo también
-          await _prefs.setString('user_email', email);
-          debugPrint('Email guardado en SharedPreferences: $email');
+          // Navegar según si tiene email o no
           if (!mounted) return;
-          context.go('/location-permission');
+          if (user.email == null || user.email!.isEmpty) {
+            _logger.i('Usuario sin email, redirigiendo a completar perfil');
+            context.go('/complete-profile');
+          } else {
+            _logger.i(
+              'Usuario con email, redirigiendo a permisos de ubicación',
+            );
+            context.go('/location-permission');
+          }
+        } else {
+          // Si no hay usuario en modo bypass, ir a completar perfil
+          if (!mounted) return;
+          _logger.i(
+            'No hay usuario en modo bypass, redirigiendo a completar perfil',
+          );
+          context.go('/complete-profile');
         }
         return;
       }
+
+      _logger.i(
+        'Verificando OTP: ${_otpController.text.trim()} para teléfono: ${widget.phone}',
+      );
 
       final AuthResponse response = await Supabase.instance.client.auth
           .verifyOTP(
@@ -89,6 +104,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             phone: widget.phone,
             token: _otpController.text.trim(),
           );
+
+      _logger.i(
+        'Respuesta de verificación OTP: ${response.session != null ? 'Éxito' : 'Fallido'}',
+      );
+
       if (response.session != null) {
         setState(() {
           _success = true;
@@ -96,26 +116,27 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
         // Guardar el teléfono en SharedPreferences
         await _prefs.setString('user_phone', widget.phone);
-        debugPrint('Teléfono guardado en SharedPreferences: ${widget.phone}');
+        _logger.i('Teléfono guardado en SharedPreferences: ${widget.phone}');
 
         // Si hay email, guardarlo también
         final user = response.user;
         if (user?.email != null && user!.email!.isNotEmpty) {
           await _prefs.setString('user_email', user.email!);
-          debugPrint('Email guardado en SharedPreferences: ${user.email}');
+          _logger.i('Email guardado en SharedPreferences: ${user.email}');
         }
 
         // Actualizar el perfil en la tabla profiles
         if (user != null) {
           try {
+            _logger.i('Actualizando perfil para usuario: ${user.id}');
             await _userRepository.createOrUpdateUserProfile(
               userId: user.id,
               email: user.email,
               phone: widget.phone,
             );
-            debugPrint('Perfil actualizado en la tabla profiles');
+            _logger.i('Perfil actualizado en la tabla profiles');
           } catch (e) {
-            debugPrint('Error al actualizar perfil: $e');
+            _logger.e('Error al actualizar perfil: $e');
           }
         }
 
@@ -124,20 +145,25 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
         final String? email = user?.email;
         if (email == null || email.isEmpty) {
+          _logger.i('Usuario sin email, redirigiendo a completar perfil');
           context.go('/complete-profile');
         } else {
+          _logger.i('Usuario con email, redirigiendo a permisos de ubicación');
           context.go('/location-permission');
         }
       } else {
+        _logger.w('Código OTP incorrecto o expirado');
         setState(() {
           _errorMessage = 'Código incorrecto o expirado.';
         });
       }
     } on AuthException catch (err) {
+      _logger.e('Error de autenticación: ${err.message}');
       setState(() {
         _errorMessage = err.message;
       });
-    } catch (_) {
+    } catch (e) {
+      _logger.e('Error inesperado: $e');
       setState(() {
         _errorMessage = 'Ocurrió un error inesperado.';
       });

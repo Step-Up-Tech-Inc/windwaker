@@ -13,6 +13,68 @@ class UserRepository {
     return _supabaseClient.auth.currentUser;
   }
 
+  /// Verifica la estructura de la tabla profiles
+  Future<Map<String, dynamic>> verifyProfilesTable() async {
+    try {
+      _logger.i('Verificando estructura de la tabla profiles...');
+
+      // Verificar si la tabla existe
+      try {
+        final result = await _supabaseClient
+            .from('profiles')
+            .select('id')
+            .limit(1);
+        _logger.i('La tabla profiles existe. Resultado de prueba: $result');
+      } catch (e) {
+        _logger.e('Error al consultar tabla profiles: $e');
+        return {'exists': false, 'error': e.toString()};
+      }
+
+      // Verificar los permisos de escritura
+      try {
+        final user = getCurrentUser();
+        if (user != null) {
+          _logger.i(
+            'Intentando verificar permisos de escritura para usuario: ${user.id}',
+          );
+
+          final testData = {
+            'id': user.id,
+            'email': user.email,
+            'phone': 'test_phone',
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+
+          final response =
+              await _supabaseClient.from('profiles').upsert(testData).select();
+
+          _logger.i('Prueba de escritura exitosa: $response');
+          return {
+            'exists': true,
+            'writable': true,
+            'sample': response,
+            'user': user.id,
+          };
+        } else {
+          _logger.w(
+            'No hay usuario autenticado para probar permisos de escritura',
+          );
+          return {
+            'exists': true,
+            'writable': false,
+            'reason': 'No user authenticated',
+          };
+        }
+      } catch (e) {
+        _logger.e('Error al verificar permisos de escritura: $e');
+        return {'exists': true, 'writable': false, 'error': e.toString()};
+      }
+    } catch (e) {
+      _logger.e('Error general al verificar tabla profiles: $e');
+      return {'error': e.toString()};
+    }
+  }
+
   /// Crea o actualiza el perfil del usuario en la tabla 'profiles'
   Future<void> createOrUpdateUserProfile({
     required String userId,
@@ -24,37 +86,7 @@ class UserRepository {
         'Iniciando createOrUpdateUserProfile - userId: $userId, email: $email, phone: $phone',
       );
 
-      // Verificar si la tabla profiles existe
-      try {
-        final tableCheck = await _supabaseClient.rpc(
-          'check_table_exists',
-          params: {'table_name': 'profiles'},
-        );
-        _logger.i('¿Existe tabla profiles?: $tableCheck');
-
-        if (tableCheck == false) {
-          _logger.w('La tabla profiles no existe. Intentando crearla...');
-          await _supabaseClient.rpc(
-            'exec_sql',
-            params: {
-              'sql': '''
-            CREATE TABLE IF NOT EXISTS profiles (
-              id UUID PRIMARY KEY,
-              email TEXT,
-              phone TEXT,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-              updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
-            ''',
-            },
-          );
-        }
-      } catch (e) {
-        _logger.e('Error al verificar tabla profiles: $e');
-      }
-
-      // Usar upsert directamente para simplificar
+      // Preparar datos para upsert
       final now = DateTime.now().toIso8601String();
       final data = {
         'id': userId,
@@ -63,34 +95,49 @@ class UserRepository {
         'updated_at': now,
       };
 
-      _logger.i('Datos para upsert: $data');
+      _logger.i('Intentando upsert con datos: $data');
 
       try {
+        // Intentar upsert directo
         final response =
             await _supabaseClient.from('profiles').upsert(data).select();
 
-        _logger.i('Respuesta de upsert: $response');
-        _logger.i('Perfil de usuario creado/actualizado con éxito');
-      } catch (e) {
-        _logger.e('Error en upsert: $e');
+        _logger.i('Upsert exitoso. Respuesta: $response');
+      } catch (upsertError) {
+        _logger.e('Error en upsert: $upsertError');
 
-        // Intentar con método alternativo de inserción directa
+        // Verificar si el registro existe
         try {
-          _logger.i('Intentando inserción directa con SQL...');
-          final sql = '''
-          INSERT INTO profiles (id, email, phone, created_at, updated_at)
-          VALUES ('$userId', ${email != null ? "'$email'" : 'NULL'}, ${phone != null ? "'$phone'" : 'NULL'}, '$now', '$now')
-          ON CONFLICT (id) DO UPDATE SET 
-            email = ${email != null ? "'$email'" : 'EXCLUDED.email'},
-            phone = ${phone != null ? "'$phone'" : 'EXCLUDED.phone'},
-            updated_at = '$now';
-          ''';
+          final exists =
+              await _supabaseClient
+                  .from('profiles')
+                  .select('id')
+                  .eq('id', userId)
+                  .maybeSingle();
 
-          await _supabaseClient.rpc('exec_sql', params: {'sql': sql});
-          _logger.i('Inserción directa con SQL exitosa');
-        } catch (sqlError) {
-          _logger.e('Error en inserción directa: $sqlError');
-          throw Exception('No se pudo crear/actualizar el perfil: $sqlError');
+          if (exists != null) {
+            // Si existe, actualizar
+            _logger.i('Perfil existe, actualizando...');
+            await _supabaseClient
+                .from('profiles')
+                .update({'email': email, 'phone': phone, 'updated_at': now})
+                .eq('id', userId);
+            _logger.i('Actualización exitosa');
+          } else {
+            // Si no existe, insertar
+            _logger.i('Perfil no existe, insertando...');
+            await _supabaseClient.from('profiles').insert({
+              'id': userId,
+              'email': email,
+              'phone': phone,
+              'created_at': now,
+              'updated_at': now,
+            });
+            _logger.i('Inserción exitosa');
+          }
+        } catch (e) {
+          _logger.e('Error en operación alternativa: $e');
+          throw Exception('No se pudo crear/actualizar el perfil: $e');
         }
       }
 
@@ -99,6 +146,7 @@ class UserRepository {
       _logger.i('Perfil actualizado: $updatedProfile');
     } catch (e) {
       _logger.e('Error al crear/actualizar perfil de usuario: $e');
+      throw Exception('Error al crear/actualizar perfil de usuario: $e');
     }
   }
 

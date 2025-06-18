@@ -9,12 +9,15 @@ import 'package:windwaker/core/config/di_config.dart';
 import 'package:windwaker/core/config/firebase_options.dart';
 import 'package:windwaker/core/config/remote_config_service.dart';
 import 'package:windwaker/core/network/supabase_service.dart';
+import 'package:windwaker/core/storage/secure_local_storage.dart';
 import 'package:windwaker/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:windwaker/core/router.dart';
+import 'package:logger/logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final logger = Logger();
 
   // Orientación de la aplicación
   await SystemChrome.setPreferredOrientations([
@@ -43,21 +46,32 @@ void main() async {
       await RemoteConfigService().initialize();
     }
   } catch (e) {
-    debugPrint('Error al inicializar Firebase: $e');
+    logger.e('Error al inicializar Firebase: $e');
     // Continuar con la ejecución de la app aunque Firebase falle
   }
 
   try {
+    // Inicializar almacenamiento seguro para Supabase
+    final secureStorage = SecureLocalStorage();
+    await secureStorage.initialize();
+
     // Inicializar Supabase
     await Supabase.initialize(
       url: AppConfig.supabaseUrl,
       anonKey: AppConfig.supabaseAnonKey,
+      debug: kDebugMode,
+      authOptions: FlutterAuthClientOptions(
+        localStorage: secureStorage,
+        autoRefreshToken: true,
+      ),
     );
+
+    logger.i('Supabase inicializado correctamente');
 
     // Inicializar el servicio de Supabase
     await SupabaseService().initialize();
   } catch (e) {
-    debugPrint('Error al inicializar Supabase: $e');
+    logger.e('Error al inicializar Supabase: $e');
     // Continuar con la ejecución de la app aunque Supabase falle
   }
 

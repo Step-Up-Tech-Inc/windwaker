@@ -4,6 +4,7 @@ import '../../core/models/negocio.dart';
 import '../../core/models/cart_item.dart';
 import '../../core/models/order.dart';
 import '../../core/services/order_service.dart';
+import '../../core/widgets/emergency_logout_button.dart';
 import 'cubit/home_cubit.dart';
 import 'widgets/order_status_banner.dart';
 import 'widgets/promotion_carousel.dart';
@@ -25,12 +26,22 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _ubicacionExpandida = false;
   Order? _activeOrder;
   bool _isLoadingOrder = true;
+  bool _showEmergencyButton = false;
 
   @override
   void initState() {
     super.initState();
     context.read<HomeCubit>().loadInitialData();
     _loadActiveOrder();
+
+    // Mostrar el botón de emergencia después de un tiempo
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _showEmergencyButton = true;
+        });
+      }
+    });
   }
 
   Future<void> _loadActiveOrder() async {
@@ -94,6 +105,11 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
+      floatingActionButton:
+          _showEmergencyButton
+              ? const EmergencyLogoutButton(backgroundColor: Colors.redAccent)
+              : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: const BottomNavigation(currentIndex: 0),
     );
   }

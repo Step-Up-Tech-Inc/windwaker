@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:windwaker/core/config/di_config.dart';
+import 'package:windwaker/core/services/auth_service.dart';
+import 'package:logger/logger.dart';
 
 class AuthGateScreen extends StatefulWidget {
   const AuthGateScreen({super.key});
@@ -13,33 +16,88 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
   bool showLogin = false;
   bool showRegister = false;
   bool _checkedSession = false;
-  // ignore: prefer_final_fields
-  bool _isLoading = false;
+  bool _isLoading = true;
   String? _errorMessage;
+  final _logger = Logger();
+  late final AuthService _authService;
 
   @override
   void initState() {
     super.initState();
+    _authService = getIt<AuthService>();
     _checkSessionAndRedirect();
   }
 
   Future<void> _checkSessionAndRedirect() async {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
-      if (!mounted) return;
-      context.go('/location-permission');
-    } else {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      _logger.i('Verificando sesión en AuthGateScreen');
+
+      // Verificar si hay una sesión activa
+      final session = Supabase.instance.client.auth.currentSession;
+      _logger.i(
+        'Sesión actual: ${session != null ? 'Activa' : 'No hay sesión'}',
+      );
+
+      if (session != null) {
+        // Intentar refrescar la sesión
+        final sessionValid = await _authService.verifyAndRefreshSession();
+        _logger.i('Sesión válida después de verificación: $sessionValid');
+
+        if (sessionValid) {
+          _logger.i('Sesión válida, redirigiendo a la pantalla principal');
+          if (!mounted) return;
+          context.go('/location-permission');
+          return;
+        } else {
+          _logger.w('Sesión no válida, se requiere nuevo inicio de sesión');
+        }
+      } else {
+        _logger.i('No hay sesión activa, mostrando pantalla de autenticación');
+      }
+
       setState(() {
         _checkedSession = true;
+        _isLoading = false;
+      });
+    } catch (e) {
+      _logger.e('Error al verificar la sesión: $e');
+      setState(() {
+        _checkedSession = true;
+        _isLoading = false;
+        _errorMessage = 'Error al verificar la sesión: $e';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_checkedSession) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              const Text('Verificando sesión...'),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
     }
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -50,56 +108,45 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  const SizedBox(height: 48),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(32),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: Colors.black.withAlpha((0.08 * 255).round()),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(32),
-                    child: const Icon(
-                      Icons.store,
-                      size: 64,
-                      color: Color(0xFF2979FF),
-                    ),
-                  ),
                   const SizedBox(height: 32),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 120,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.shopping_basket,
+                        size: 120,
+                        color: Color(0xFF2979FF),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
                   const Text(
-                    'Tilarán en Línea',
+                    'Bienvenido',
                     style: TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,
-                      fontSize: 28,
-                      letterSpacing: 1.2,
+                      fontSize: 24,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   const Text(
-                    'Tu ciudad en tu bolsillo',
+                    'Inicia sesión para continuar',
                     style: TextStyle(
-                      color: Color(0xFF424242),
-                      fontWeight: FontWeight.w400,
-                      fontSize: 16,
-                      letterSpacing: 0.5,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 18,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed:
-                          _isLoading
-                              ? null
-                              : () {
-                                context.go('/phone-login');
-                              },
+                      onPressed: () {
+                        context.go('/phone-login');
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2979FF),
                         shape: RoundedRectangleBorder(
@@ -108,42 +155,16 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 0,
                       ),
-                      child:
-                          _isLoading
-                              ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                              : const Text(
-                                'Iniciar sesión con teléfono',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                    ),
-                  ),
-                  if (_errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: SelectableText.rich(
-                        TextSpan(
-                          text: _errorMessage,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 15,
-                          ),
+                      child: const Text(
+                        'Continuar con teléfono',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

@@ -7,6 +7,7 @@ import 'package:windwaker/core/services/app_intro_service.dart';
 import 'package:windwaker/core/services/auth_service.dart';
 import 'package:windwaker/screens/auth/auth_gate_screen.dart';
 import 'package:windwaker/screens/auth/complete_profile_screen.dart';
+import 'package:windwaker/screens/auth/emergency_logout_screen.dart';
 import 'package:windwaker/screens/auth/otp_verification_screen.dart';
 import 'package:windwaker/screens/auth/phone_login_screen.dart';
 import 'package:windwaker/screens/auth/email_verification_screen.dart';
@@ -74,6 +75,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LocationPermissionScreen(),
       ),
       GoRoute(
+        path: '/emergency-logout',
+        builder: (context, state) => const EmergencyLogoutScreen(),
+      ),
+      GoRoute(
         path: '/home',
         builder: (context, state) {
           return Builder(
@@ -110,6 +115,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // No redirigir si estamos en la pantalla principal
       if (state.matchedLocation == '/home') {
+        return null;
+      }
+
+      // No redirigir si estamos en la pantalla de cierre de sesión de emergencia
+      if (state.matchedLocation == '/emergency-logout') {
         return null;
       }
 

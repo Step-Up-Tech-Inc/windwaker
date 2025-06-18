@@ -7,6 +7,7 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:windwaker/core/repositories/user_repository.dart';
 import 'package:windwaker/core/config/di_config.dart';
+import 'package:logger/logger.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -23,6 +24,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   bool _success = false;
   late final UserRepository _userRepository;
   late final SharedPreferences _prefs;
+  final _logger = Logger();
 
   @override
   void initState() {
@@ -71,7 +73,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
       // Guardar el email en SharedPreferences
       await _prefs.setString('user_email', email);
-      debugPrint('Email guardado en SharedPreferences: $email');
+      _logger.i('Email guardado en SharedPreferences: $email');
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
@@ -80,18 +82,21 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           final authResponse = await Supabase.instance.client.auth.updateUser(
             UserAttributes(email: email),
           );
-          debugPrint('Email actualizado en Auth: ${authResponse.user?.email}');
+          _logger.i('Email actualizado en Auth: ${authResponse.user?.email}');
 
           // Crear o actualizar el perfil en la tabla profiles
           final phone = _prefs.getString('user_phone');
+          _logger.i(
+            'Intentando actualizar perfil - userId: ${user.id}, email: $email, phone: $phone',
+          );
           await _userRepository.createOrUpdateUserProfile(
             userId: user.id,
             email: email,
             phone: phone,
           );
-          debugPrint('Perfil actualizado en la tabla profiles');
+          _logger.i('Perfil actualizado en la tabla profiles');
         } catch (authError) {
-          debugPrint(
+          _logger.e(
             'Error al actualizar email en Auth (continuando de todos modos): $authError',
           );
         }
@@ -105,13 +110,13 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       if (!mounted) return;
       context.go('/location-permission');
     } on AuthException catch (err) {
-      debugPrint('Error de autenticación: ${err.message}');
+      _logger.e('Error de autenticación: ${err.message}');
       if (!mounted) return;
       setState(() {
         _errorMessage = err.message;
       });
     } catch (e) {
-      debugPrint('Error inesperado: $e');
+      _logger.e('Error inesperado: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Ocurrió un error inesperado: $e';

@@ -34,11 +34,17 @@ Future<void> setupDependencies() async {
   final supabaseClient = Supabase.instance.client;
   getIt.registerLazySingleton<SupabaseClient>(() => supabaseClient);
 
+  // Repositorio de usuarios
+  getIt.registerLazySingleton<UserRepository>(
+    () => UserRepository(supabaseClient: getIt<SupabaseClient>()),
+  );
+
   // Servicio de autenticación
   getIt.registerLazySingleton<AuthService>(
     () => AuthService(
       prefs: getIt<SharedPreferences>(),
       supabaseClient: getIt<SupabaseClient>(),
+      userRepository: getIt<UserRepository>(),
     ),
   );
 
@@ -53,11 +59,6 @@ Future<void> setupDependencies() async {
   // Repositorios
   getIt.registerLazySingleton<NegociosRepository>(
     () => NegociosRepository(supabaseClient: getIt<SupabaseClient>()),
-  );
-
-  // Repositorio de usuarios
-  getIt.registerLazySingleton<UserRepository>(
-    () => UserRepository(supabaseClient: getIt<SupabaseClient>()),
   );
 
   // Inicializar el factory de ProductRepository que elige entre local y remoto
