@@ -9,11 +9,13 @@ import 'package:windwaker/core/config/di_config.dart';
 import 'package:windwaker/core/config/firebase_options.dart';
 import 'package:windwaker/core/config/remote_config_service.dart';
 import 'package:windwaker/core/network/supabase_service.dart';
+import 'package:windwaker/core/services/migration_service.dart';
 import 'package:windwaker/core/storage/secure_local_storage.dart';
 import 'package:windwaker/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:windwaker/core/router.dart';
 import 'package:logger/logger.dart';
+import 'package:get_it/get_it.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,6 +79,30 @@ void main() async {
 
   // Configurar inyección de dependencias
   await setupDependencies();
+
+  // Ejecutar migraciones
+  try {
+    final migrationService = GetIt.I<MigrationService>();
+    await migrationService.runMigrations();
+    logger.i('Migraciones ejecutadas correctamente');
+  } catch (e) {
+    logger.e('Error al ejecutar migraciones: $e');
+  }
+
+  // Verificar la sesión actual
+  try {
+    final session = Supabase.instance.client.auth.currentSession;
+    final user = Supabase.instance.client.auth.currentUser;
+    logger.i('Sesión actual: ${session != null ? 'Activa' : 'Inactiva'}');
+    logger.i('Usuario actual: ${user != null ? user.id : 'No hay usuario'}');
+
+    if (user != null) {
+      logger.i('Email del usuario: ${user.email}');
+      logger.i('Teléfono del usuario: ${user.phone}');
+    }
+  } catch (e) {
+    logger.e('Error al verificar la sesión: $e');
+  }
 
   runApp(const ProviderScope(child: MyApp()));
 }

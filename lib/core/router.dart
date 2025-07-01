@@ -68,7 +68,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/complete-profile',
-        builder: (context, state) => const CompleteProfileScreen(),
+        builder: (context, state) {
+          final String? phone = state.uri.queryParameters['phone'];
+          final String? otp = state.uri.queryParameters['otp'];
+          final String? bypass = state.uri.queryParameters['bypass'];
+          return CompleteProfileScreen(
+            phone: phone,
+            otp: otp,
+            bypass: bypass == 'true',
+          );
+        },
       ),
       GoRoute(
         path: '/location-permission',

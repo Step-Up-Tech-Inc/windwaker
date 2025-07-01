@@ -7,12 +7,12 @@ class AuthService {
   final SharedPreferences _prefs;
   final SupabaseClient _supabaseClient;
   final _logger = Logger();
-  final UserRepository? _userRepository;
+  final UserRepository _userRepository;
 
   AuthService({
     required SharedPreferences prefs,
     SupabaseClient? supabaseClient,
-    UserRepository? userRepository,
+    required UserRepository userRepository,
   }) : _prefs = prefs,
        _supabaseClient = supabaseClient ?? Supabase.instance.client,
        _userRepository = userRepository;
@@ -76,121 +76,289 @@ class AuthService {
     return user?.phone;
   }
 
-  /// Verifica y refresca la sesión si es necesario
+  /// Verifica y refresca la sesión de Supabase
   Future<bool> verifyAndRefreshSession() async {
     try {
       _logger.i('Verificando sesión de Supabase...');
 
-      // Obtener la sesión actual
+      // Verificar si hay una sesión activa
       final session = _supabaseClient.auth.currentSession;
-
-      // Si no hay sesión, intentar recuperarla
       if (session == null) {
         _logger.w('No hay sesión activa, intentando recuperar...');
 
-        // Intentar recuperar la sesión
-        try {
-          final authResponse = await _supabaseClient.auth.recoverSession('');
-          if (authResponse.session != null) {
-            _logger.i('Sesión recuperada con éxito');
-            await _updateUserData(authResponse.user, authResponse.session);
-            return true;
-          } else {
-            _logger.w('No se pudo recuperar la sesión');
-            return false;
-          }
-        } catch (e) {
-          _logger.e('Error al recuperar sesión: $e');
-          return false;
-        }
-      }
+        // Intentar recuperar la sesión usando datos de SharedPreferences
+        final phone = _prefs.getString('user_phone');
+        if (phone != null) {
+          _logger.i('Encontrado teléfono en SharedPreferences: $phone');
 
-      // Verificar si la sesión está por expirar (menos de 1 hora)
-      final expiresAt = session.expiresAt;
-      if (expiresAt != null) {
-        final now = DateTime.now().millisecondsSinceEpoch / 1000;
-        final expiresInSeconds = expiresAt - now;
-
-        _logger.i('La sesión expira en $expiresInSeconds segundos');
-
-        // Si expira en menos de 1 hora, refrescar
-        if (expiresInSeconds < 3600) {
-          _logger.i('La sesión expira pronto, refrescando...');
-
+          // Intentar buscar el perfil por teléfono
           try {
-            final response = await _supabaseClient.auth.refreshSession();
+            final data =
+                await _supabaseClient
+                    .from('profiles')
+                    .select('id, email, phone')
+                    .eq('phone', phone)
+                    .maybeSingle();
 
-            if (response.session != null) {
-              _logger.i('Sesión refrescada con éxito');
-              await _updateUserData(response.user, response.session);
-              return true;
+            if (data != null) {
+              _logger.i('Encontrado perfil por teléfono: $data');
+
+              // Guardar el email en SharedPreferences si existe
+              if (data['email'] != null) {
+                await _prefs.setString('user_email', data['email'] as String);
+                _logger.i(
+                  'Email guardado en SharedPreferences: ${data['email']}',
+                );
+              }
+
+              // Intentar iniciar sesión nuevamente
+              _logger.i('Intentando iniciar sesión con teléfono encontrado...');
+              return false; // No pudimos recuperar la sesión automáticamente
             } else {
-              _logger.w('No se pudo refrescar la sesión');
-              return false;
+              _logger.w('No se encontró perfil para el teléfono: $phone');
             }
           } catch (e) {
-            _logger.e('Error al refrescar la sesión: $e');
-
-            // Intentar reconectar si hay un error
-            try {
-              _logger.i('Intentando reconectar...');
-              await _supabaseClient.auth.refreshSession();
-              _logger.i('Reconexión exitosa');
-              return true;
-            } catch (reconnectError) {
-              _logger.e('Error al reconectar: $reconnectError');
-              return false;
-            }
+            _logger.e('Error al buscar perfil por teléfono: $e');
           }
         }
+
+        return false;
       }
 
-      _logger.i('La sesión está activa y válida');
-      return true;
+      // Refrescar la sesión
+      _logger.i('Refrescando sesión...');
+      final response = await _supabaseClient.auth.refreshSession();
+      if (response.session != null) {
+        _logger.i('Sesión refrescada con éxito');
+
+        // Actualizar datos del usuario si es necesario
+        final user = _supabaseClient.auth.currentUser;
+        if (user != null) {
+          // Verificar si el perfil existe en la tabla profiles
+          try {
+            final profile = await _userRepository.getUserProfile(user.id);
+
+            // Obtener datos de SharedPreferences
+            final phone = _prefs.getString('user_phone');
+            final email = _prefs.getString('user_email') ?? user.email;
+
+            if (profile == null) {
+              _logger.w(
+                'No se encontró perfil para el usuario, creando uno nuevo',
+              );
+
+              // Crear perfil usando SQL directo para garantizar que se guarde correctamente
+              try {
+                final createSql = '''
+                INSERT INTO profiles (id, email, phone, created_at, updated_at)
+                VALUES ('${user.id}', ${email != null ? "'$email'" : 'NULL'}, ${phone != null ? "'$phone'" : 'NULL'}, NOW(), NOW())
+                ON CONFLICT (id) 
+                DO UPDATE SET 
+                  email = COALESCE(EXCLUDED.email, profiles.email),
+                  phone = COALESCE(EXCLUDED.phone, profiles.phone),
+                  updated_at = NOW();
+                ''';
+
+                await _supabaseClient.rpc(
+                  'exec_sql',
+                  params: {'sql': createSql},
+                );
+                _logger.i('Perfil creado con SQL directo');
+
+                // Verificar que el perfil se creó correctamente
+                final createdProfile = await _userRepository.getUserProfile(
+                  user.id,
+                );
+                _logger.i('Perfil creado: $createdProfile');
+
+                // Si el email no se guardó correctamente, intentar nuevamente
+                if (email != null &&
+                    email.isNotEmpty &&
+                    (createdProfile == null ||
+                        createdProfile['email'] != email)) {
+                  _logger.w(
+                    'El email no se guardó correctamente, intentando nuevamente',
+                  );
+
+                  final emailUpdateSql = '''
+                  UPDATE profiles SET email = '$email', updated_at = NOW()
+                  WHERE id = '${user.id}';
+                  ''';
+
+                  await _supabaseClient.rpc(
+                    'exec_sql',
+                    params: {'sql': emailUpdateSql},
+                  );
+                  _logger.i(
+                    'Email actualizado con SQL directo (segundo intento)',
+                  );
+                }
+              } catch (sqlError) {
+                _logger.e('Error al crear perfil con SQL directo: $sqlError');
+
+                // Usar el método normal como respaldo
+                await _userRepository.createOrUpdateUserProfile(
+                  userId: user.id,
+                  email: email,
+                  phone: phone,
+                );
+                _logger.i('Perfil creado usando el método normal');
+              }
+            } else {
+              _logger.i('Perfil encontrado: $profile');
+
+              // Verificar si el email y teléfono están actualizados
+              bool needsUpdate = false;
+
+              if (email != null &&
+                  email.isNotEmpty &&
+                  profile['email'] != email) {
+                _logger.w('Email desactualizado en el perfil');
+                needsUpdate = true;
+              }
+
+              if (phone != null &&
+                  phone.isNotEmpty &&
+                  profile['phone'] != phone) {
+                _logger.w('Teléfono desactualizado en el perfil');
+                needsUpdate = true;
+              }
+
+              if (needsUpdate) {
+                _logger.i('Actualizando perfil...');
+
+                try {
+                  // Construir la parte SET del SQL
+                  String setSql = "";
+                  if (email != null && email.isNotEmpty)
+                    setSql += "email = '$email', ";
+                  if (phone != null && phone.isNotEmpty)
+                    setSql += "phone = '$phone', ";
+                  setSql += "updated_at = NOW()";
+
+                  final updateSql = '''
+                  UPDATE profiles SET $setSql
+                  WHERE id = '${user.id}';
+                  ''';
+
+                  await _supabaseClient.rpc(
+                    'exec_sql',
+                    params: {'sql': updateSql},
+                  );
+                  _logger.i('Perfil actualizado con SQL directo');
+
+                  // Verificar actualización
+                  final updatedProfile = await _userRepository.getUserProfile(
+                    user.id,
+                  );
+                  _logger.i('Perfil actualizado: $updatedProfile');
+
+                  // Si el email en auth.users es diferente al de SharedPreferences, actualizarlo
+                  if (email != null &&
+                      email.isNotEmpty &&
+                      (user.email == null || user.email != email)) {
+                    try {
+                      await _supabaseClient.auth.updateUser(
+                        UserAttributes(email: email),
+                      );
+                      _logger.i('Email actualizado en auth.users: $email');
+                    } catch (e) {
+                      _logger.e('Error al actualizar email en auth.users: $e');
+                    }
+                  }
+                } catch (e) {
+                  _logger.e('Error al actualizar perfil: $e');
+
+                  // Usar el método normal como respaldo
+                  await _userRepository.createOrUpdateUserProfile(
+                    userId: user.id,
+                    email: email,
+                    phone: phone,
+                  );
+                  _logger.i('Perfil actualizado usando el método normal');
+                }
+              } else {
+                _logger.i('Perfil ya está actualizado');
+              }
+            }
+          } catch (e) {
+            _logger.e('Error al verificar/actualizar perfil: $e');
+          }
+        }
+
+        return true;
+      } else {
+        _logger.w('No se pudo refrescar la sesión');
+        return false;
+      }
     } catch (e) {
-      _logger.e('Error general al verificar/refrescar la sesión: $e');
+      _logger.e('Error al verificar/refrescar sesión: $e');
       return false;
     }
   }
 
-  /// Actualiza los datos del usuario en SharedPreferences y en la base de datos
+  /// Actualiza los datos del usuario en SharedPreferences y en la tabla profiles
   Future<void> _updateUserData(User? user, Session? session) async {
     if (user == null) return;
 
-    // Actualizar datos en SharedPreferences
-    if (user.email != null) {
-      await _prefs.setString('user_email', user.email!);
-    }
-    if (user.phone != null) {
-      await _prefs.setString('user_phone', user.phone!);
-    }
+    try {
+      _logger.i('Actualizando datos de usuario: ${user.id}');
 
-    // Guardar información de la sesión
-    if (session != null) {
-      await _prefs.setString(
-        'session_expires_at',
-        (session.expiresAt ?? 0).toString(),
-      );
-      await _prefs.setString(
-        'session_refresh_token',
-        session.refreshToken ?? '',
-      );
-    }
-
-    // Actualizar perfil en la base de datos
-    if (_userRepository != null) {
-      try {
-        await _userRepository.createOrUpdateUserProfile(
-          userId: user.id,
-          email: user.email,
-          phone: user.phone,
-        );
-        _logger.i('Perfil actualizado durante verificación de sesión');
-      } catch (e) {
-        _logger.e(
-          'Error al actualizar perfil durante verificación de sesión: $e',
-        );
+      // Guardar email si existe
+      if (user.email != null && user.email!.isNotEmpty) {
+        await _prefs.setString('user_email', user.email!);
+        _logger.i('Email guardado en SharedPreferences: ${user.email}');
       }
+
+      // Guardar teléfono si existe
+      if (user.phone != null && user.phone!.isNotEmpty) {
+        await _prefs.setString('user_phone', user.phone!);
+        _logger.i('Teléfono guardado en SharedPreferences: ${user.phone}');
+      }
+
+      // Actualizar perfil en la tabla profiles
+      await _userRepository.createOrUpdateUserProfile(
+        userId: user.id,
+        email: user.email,
+        phone: user.phone,
+      );
+      _logger.i('Perfil actualizado en la tabla profiles');
+    } catch (e) {
+      _logger.e('Error al actualizar datos de usuario: $e');
+    }
+  }
+
+  /// Actualiza el email del usuario
+  Future<bool> updateUserEmail(String email) async {
+    try {
+      _logger.i('Actualizando email del usuario a: $email');
+
+      // Actualizar en Supabase Auth
+      final response = await _supabaseClient.auth.updateUser(
+        UserAttributes(email: email),
+      );
+
+      if (response.user == null) {
+        _logger.e('Error al actualizar email en Auth: usuario nulo');
+        return false;
+      }
+
+      // Actualizar en SharedPreferences
+      await _prefs.setString('user_email', email);
+      _logger.i('Email actualizado en SharedPreferences');
+
+      // Actualizar en la tabla profiles
+      await _userRepository.createOrUpdateUserProfile(
+        userId: response.user!.id,
+        email: email,
+        phone: response.user!.phone,
+      );
+      _logger.i('Email actualizado en la tabla profiles');
+
+      return true;
+    } catch (e) {
+      _logger.e('Error al actualizar email del usuario: $e');
+      return false;
     }
   }
 

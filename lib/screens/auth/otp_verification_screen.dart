@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:windwaker/core/config/di_config.dart';
-import 'package:windwaker/core/repositories/user_repository.dart';
 import 'package:logger/logger.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
@@ -19,15 +16,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   String? _errorMessage;
   bool _isLoading = false;
   bool _success = false;
-  late final SharedPreferences _prefs;
-  late final UserRepository _userRepository;
   final _logger = Logger();
 
   @override
   void initState() {
     super.initState();
-    _prefs = getIt<SharedPreferences>();
-    _userRepository = getIt<UserRepository>();
   }
 
   @override
@@ -43,113 +36,109 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       _success = false;
     });
     try {
-      // Permitir bypass para pruebas locales con código 000000
-      if (_otpController.text.trim() == '000000') {
+      final otp = _otpController.text.trim();
+
+      // Código bypass para desarrollo - navegar directamente sin autenticación
+      if (otp == '000000') {
+        _logger.i(
+          'Usando código bypass 000000 para pruebas - navegando directamente',
+        );
         setState(() {
           _success = true;
         });
 
-        _logger.i('Usando código bypass 000000 para pruebas');
-
-        // Intentar obtener usuario actual (podría ser null en modo bypass)
-        final user = Supabase.instance.client.auth.currentUser;
-
-        // Guardar el teléfono en SharedPreferences
-        await _prefs.setString('user_phone', widget.phone);
-        _logger.i('Teléfono guardado en SharedPreferences: ${widget.phone}');
-
-        // Actualizar el perfil en la tabla profiles si hay un usuario
-        if (user != null) {
-          try {
-            _logger.i('Actualizando perfil para usuario: ${user.id}');
-            await _userRepository.createOrUpdateUserProfile(
-              userId: user.id,
-              email: user.email,
-              phone: widget.phone,
-            );
-            _logger.i('Perfil actualizado en la tabla profiles');
-          } catch (e) {
-            _logger.e('Error al actualizar perfil: $e');
-          }
-
-          // Navegar según si tiene email o no
-          if (!mounted) return;
-          if (user.email == null || user.email!.isEmpty) {
-            _logger.i('Usuario sin email, redirigiendo a completar perfil');
-            context.go('/complete-profile');
-          } else {
-            _logger.i(
-              'Usuario con email, redirigiendo a permisos de ubicación',
-            );
-            context.go('/location-permission');
-          }
-        } else {
-          // Si no hay usuario en modo bypass, ir a completar perfil
-          if (!mounted) return;
-          _logger.i(
-            'No hay usuario en modo bypass, redirigiendo a completar perfil',
-          );
-          context.go('/complete-profile');
-        }
+        // En modo bypass, navegamos directamente a completar perfil
+        // pasando los parámetros necesarios
+        _logger.i('Bypass: navegando directamente a completar perfil');
+        if (!mounted) return;
+        context.go(
+          '/complete-profile?phone=${Uri.encodeComponent(widget.phone)}&otp=$otp&bypass=true',
+        );
         return;
       }
 
-      _logger.i(
-        'Verificando OTP: ${_otpController.text.trim()} para teléfono: ${widget.phone}',
-      );
-
+      _logger.i('Verificando OTP: $otp para teléfono: ${widget.phone}');
       final AuthResponse response = await Supabase.instance.client.auth
-          .verifyOTP(
-            type: OtpType.sms,
-            phone: widget.phone,
-            token: _otpController.text.trim(),
-          );
+          .verifyOTP(type: OtpType.sms, phone: widget.phone, token: otp);
 
-      _logger.i(
-        'Respuesta de verificación OTP: ${response.session != null ? 'Éxito' : 'Fallido'}',
-      );
+      _logger.i('=== RESPUESTA VERIFY OTP ===');
+      _logger.i('Session no nula: ${response.session != null}');
+      _logger.i('User no nulo: ${response.user != null}');
+      if (response.session != null) {
+        _logger.i(
+          'Access Token: ${response.session!.accessToken.substring(0, 20)}...',
+        );
+        _logger.i(
+          'Refresh Token no nulo: ${response.session!.refreshToken != null}',
+        );
+        _logger.i('User ID: ${response.session!.user.id}');
+        _logger.i('User Phone: ${response.session!.user.phone}');
+        _logger.i('User Email: ${response.session!.user.email}');
+      }
+
+      _logger.i('=== USUARIO ACTUAL ANTES DEL DELAY ===');
+      final userBeforeDelay = Supabase.instance.client.auth.currentUser;
+      _logger.i('Current User no nulo: ${userBeforeDelay != null}');
+      if (userBeforeDelay != null) {
+        _logger.i('Current User ID: ${userBeforeDelay.id}');
+        _logger.i('Current User Phone: ${userBeforeDelay.phone}');
+        _logger.i('Current User Email: ${userBeforeDelay.email}');
+      }
 
       if (response.session != null) {
         setState(() {
           _success = true;
         });
 
-        // Guardar el teléfono en SharedPreferences
-        await _prefs.setString('user_phone', widget.phone);
-        _logger.i('Teléfono guardado en SharedPreferences: ${widget.phone}');
+        // Intentar refrescar la sesión para asegurar que esté correctamente establecida
+        try {
+          _logger.i('Intentando refrescar la sesión...');
+          final refreshResponse =
+              await Supabase.instance.client.auth.refreshSession();
+          _logger.i(
+            'Sesión refrescada exitosamente: ${refreshResponse.session != null}',
+          );
+        } catch (e) {
+          _logger.w('Error al refrescar la sesión: $e');
+        }
 
-        // Si hay email, guardarlo también
+        // Delay para asegurar que la sesión se establezca completamente
+        await Future.delayed(const Duration(milliseconds: 1000));
+
+        _logger.i('=== USUARIO ACTUAL DESPUÉS DEL DELAY ===');
+        final currentUser = Supabase.instance.client.auth.currentUser;
+        _logger.i('Current User no nulo: ${currentUser != null}');
+        if (currentUser != null) {
+          _logger.i('Current User ID: ${currentUser.id}');
+          _logger.i('Current User Phone: ${currentUser.phone}');
+          _logger.i('Current User Email: ${currentUser.email}');
+          _logger.i('Current User JSON: ${currentUser.toJson()}');
+        }
+
+        if (currentUser == null) {
+          _logger.e(
+            'CRÍTICO: Usuario no autenticado después de verifyOTP, refresh y delay',
+          );
+          setState(() {
+            _errorMessage = 'Error en la autenticación. Intenta nuevamente.';
+          });
+          return;
+        }
+
         final user = response.user;
-        if (user?.email != null && user!.email!.isNotEmpty) {
-          await _prefs.setString('user_email', user.email!);
-          _logger.i('Email guardado en SharedPreferences: ${user.email}');
-        }
-
-        // Actualizar el perfil en la tabla profiles
-        if (user != null) {
-          try {
-            _logger.i('Actualizando perfil para usuario: ${user.id}');
-            await _userRepository.createOrUpdateUserProfile(
-              userId: user.id,
-              email: user.email,
-              phone: widget.phone,
-            );
-            _logger.i('Perfil actualizado en la tabla profiles');
-          } catch (e) {
-            _logger.e('Error al actualizar perfil: $e');
-          }
-        }
-
-        await Future.delayed(const Duration(milliseconds: 1200));
-        if (!mounted) return;
-
-        final String? email = user?.email;
+        String? email = user?.email;
         if (email == null || email.isEmpty) {
-          _logger.i('Usuario sin email, redirigiendo a completar perfil');
-          context.go('/complete-profile');
+          _logger.i('Usuario sin email, navegando a completar perfil');
+          if (!mounted) return;
+          context.go(
+            '/complete-profile?phone=${Uri.encodeComponent(widget.phone)}&otp=$otp',
+          );
+          return;
         } else {
-          _logger.i('Usuario con email, redirigiendo a permisos de ubicación');
+          _logger.i('Usuario con email, navegando a permisos de ubicación');
+          if (!mounted) return;
           context.go('/location-permission');
+          return;
         }
       } else {
         _logger.w('Código OTP incorrecto o expirado');

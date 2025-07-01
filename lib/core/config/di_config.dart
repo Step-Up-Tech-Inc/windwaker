@@ -39,6 +39,14 @@ Future<void> setupDependencies() async {
     () => UserRepository(supabaseClient: getIt<SupabaseClient>()),
   );
 
+  // Servicio de migraciones
+  getIt.registerLazySingleton<MigrationService>(
+    () => MigrationService(supabaseClient: getIt<SupabaseClient>()),
+  );
+
+  // Ejecutar migraciones
+  await getIt<MigrationService>().runMigrations();
+
   // Servicio de autenticación
   getIt.registerLazySingleton<AuthService>(
     () => AuthService(
@@ -47,14 +55,6 @@ Future<void> setupDependencies() async {
       userRepository: getIt<UserRepository>(),
     ),
   );
-
-  // Servicio de migraciones
-  getIt.registerLazySingleton<MigrationService>(
-    () => MigrationService(supabaseClient: getIt<SupabaseClient>()),
-  );
-
-  // Ejecutar migraciones
-  await getIt<MigrationService>().runMigrations();
 
   // Repositorios
   getIt.registerLazySingleton<NegociosRepository>(

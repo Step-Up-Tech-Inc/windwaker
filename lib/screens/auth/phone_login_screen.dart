@@ -69,6 +69,12 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
               phone: phone,
             );
             _logger.i('Perfil de usuario creado/actualizado con éxito');
+
+            // Verificar que el perfil se guardó correctamente
+            final updatedProfile = await _userRepository.getUserProfile(
+              currentUser.id,
+            );
+            _logger.i('Perfil después de actualización: $updatedProfile');
           } catch (profileError) {
             _logger.e('Error al crear/actualizar perfil: $profileError');
           }
