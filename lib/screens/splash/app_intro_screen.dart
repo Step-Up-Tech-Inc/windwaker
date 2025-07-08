@@ -106,9 +106,9 @@ class AppIntroScreen extends StatelessWidget {
     // Marcar la introducción como vista
     await getIt<AppIntroService>().markIntroAsSeen();
 
-    // Navegar a la pantalla principal
+    // Navegar a la pantalla de autenticación
     if (context.mounted) {
-      context.go('/home');
+      context.go('/auth');
     }
   }
 }

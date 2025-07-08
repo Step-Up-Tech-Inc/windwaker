@@ -1,49 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../screens/splash/splash_screen.dart';
-import '../screens/auth/auth_gate_screen.dart';
-import '../screens/splash/location_permission_screen.dart';
-import '../screens/splash/app_intro_screen.dart';
-import '../screens/auth/email_verification_screen.dart';
-import '../screens/auth/phone_login_screen.dart';
-import '../screens/auth/otp_verification_screen.dart';
-import '../screens/auth/complete_profile_screen.dart';
-import '../screens/search/search_screen.dart';
-import '../screens/home/home_screen.dart';
-import '../screens/store/test_store_screen.dart';
-import '../screens/cart/cart_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../screens/home/cubit/home_cubit.dart';
-import 'config/di_config.dart';
-import '../screens/order_tracking/order_tracking_screen.dart';
+import 'package:windwaker/core/config/di_config.dart';
+import 'package:windwaker/core/services/app_intro_service.dart';
+import 'package:windwaker/core/services/auth_service.dart';
+import 'package:windwaker/screens/auth/auth_gate_screen.dart';
+import 'package:windwaker/screens/auth/complete_profile_screen.dart';
+import 'package:windwaker/screens/auth/emergency_logout_screen.dart';
+import 'package:windwaker/screens/auth/otp_verification_screen.dart';
+import 'package:windwaker/screens/auth/phone_login_screen.dart';
+import 'package:windwaker/screens/auth/email_verification_screen.dart';
+import 'package:windwaker/screens/home/home_screen.dart';
+import 'package:windwaker/screens/home/cubit/home_cubit.dart';
+import 'package:windwaker/screens/splash/location_permission_screen.dart';
+import 'package:windwaker/screens/splash/app_intro_screen.dart';
+import 'package:windwaker/screens/profile/profile_screen.dart';
+import 'package:windwaker/screens/splash/splash_screen.dart';
+import 'package:windwaker/screens/search/search_screen.dart';
+import 'package:windwaker/screens/order_tracking/order_tracking_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final authService = getIt<AuthService>();
+  final appIntroService = getIt<AppIntroService>();
+
   return GoRouter(
-    initialLocation: '/',
-    routes: <GoRoute>[
-      GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+    initialLocation: '/splash',
+    debugLogDiagnostics: true,
+    routes: [
       GoRoute(
-        path: '/auth',
-        builder: (context, state) => const AuthGateScreen(),
-      ),
-      GoRoute(
-        path: '/location-permission',
-        builder: (context, state) => const LocationPermissionScreen(),
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: '/app-intro',
         builder: (context, state) => const AppIntroScreen(),
       ),
       GoRoute(
-        path: '/email-verification',
-        builder: (context, state) {
-          final String? email = state.uri.queryParameters['email'];
-          if (email == null) {
-            return const Scaffold(body: Center(child: Text('Email requerido')));
-          }
-          return EmailVerificationScreen(email: email);
-        },
+        path: '/auth',
+        builder: (context, state) => const AuthGateScreen(),
       ),
       GoRoute(
         path: '/phone-login',
@@ -62,15 +57,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/complete-profile',
-        builder: (context, state) => const CompleteProfileScreen(),
+        path: '/email-verification',
+        builder: (context, state) {
+          final String? email = state.uri.queryParameters['email'];
+          if (email == null) {
+            return const Scaffold(body: Center(child: Text('Email requerido')));
+          }
+          return EmailVerificationScreen(email: email);
+        },
       ),
       GoRoute(
-        path: '/search',
+        path: '/complete-profile',
         builder: (context, state) {
-          final String? query = state.uri.queryParameters['query'];
-          return SearchScreen(initialQuery: query);
+          final String? phone = state.uri.queryParameters['phone'];
+          final String? otp = state.uri.queryParameters['otp'];
+          final String? bypass = state.uri.queryParameters['bypass'];
+          return CompleteProfileScreen(
+            phone: phone,
+            otp: otp,
+            bypass: bypass == 'true',
+          );
         },
+      ),
+      GoRoute(
+        path: '/location-permission',
+        builder: (context, state) => const LocationPermissionScreen(),
+      ),
+      GoRoute(
+        path: '/emergency-logout',
+        builder: (context, state) => const EmergencyLogoutScreen(),
       ),
       GoRoute(
         path: '/home',
@@ -86,51 +101,94 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/orders',
-        builder:
-            (context, state) => const Scaffold(
-              body: Center(child: Text('Pantalla de Pedidos')),
-            ),
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
         path: '/profile',
-        builder:
-            (context, state) =>
-                const Scaffold(body: Center(child: Text('Pantalla de Perfil'))),
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
-        path: '/test-store',
-        builder: (context, state) => const TestStoreScreen(),
-      ),
-      GoRoute(
-        path: '/cart',
+        path: '/order-tracking',
         builder: (context, state) {
-          final String? storeId = state.uri.queryParameters['storeId'];
-          final String storeName = state.uri.queryParameters['storeName'] ?? '';
-          final String storeCategory =
-              state.uri.queryParameters['storeCategory'] ?? '';
-          final double storeRating =
-              double.tryParse(state.uri.queryParameters['storeRating'] ?? '') ??
-              4.5;
-          final String deliveryTime =
-              state.uri.queryParameters['deliveryTime'] ?? '20-30 min';
-
-          return CartScreen(
-            storeId: storeId,
-            storeName: storeName,
-            storeCategory: storeCategory,
-            storeRating: storeRating,
-            deliveryTime: deliveryTime,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/order-tracking/:orderId',
-        builder: (context, state) {
-          final String orderId = state.pathParameters['orderId'] ?? '';
-          return OrderTrackingScreen(key: UniqueKey(), orderId: orderId);
+          final String? orderId = state.uri.queryParameters['order_id'];
+          return OrderTrackingScreen(orderId: orderId ?? '');
         },
       ),
     ],
+    redirect: (BuildContext context, GoRouterState state) async {
+      // No redirigir si estamos en la pantalla de splash
+      if (state.matchedLocation == '/splash') {
+        return null;
+      }
+
+      // No redirigir si estamos en la pantalla principal
+      if (state.matchedLocation == '/home') {
+        return null;
+      }
+
+      // No redirigir si estamos en la pantalla de cierre de sesión de emergencia
+      if (state.matchedLocation == '/emergency-logout') {
+        return null;
+      }
+
+      // No redirigir si estamos en la pantalla de introducción
+      if (state.matchedLocation == '/app-intro') {
+        return null;
+      }
+
+      // Verificar si ya se mostró el onboarding
+      final bool hasSeenIntro = await appIntroService.hasSeenIntro();
+      if (!hasSeenIntro && state.matchedLocation != '/app-intro') {
+        return '/app-intro';
+      }
+
+      // Si ya vimos la introducción y estamos tratando de ir a /app-intro, redirigir a /auth
+      if (hasSeenIntro && state.matchedLocation == '/app-intro') {
+        return '/auth';
+      }
+
+      // Verificar si el usuario está autenticado
+      final isAuthenticated = authService.isAuthenticated();
+      final isProfileComplete = authService.isProfileComplete();
+
+      // Si no está autenticado y no está en una ruta de autenticación
+      if (!isAuthenticated) {
+        if (state.matchedLocation != '/auth' &&
+            state.matchedLocation != '/phone-login' &&
+            state.matchedLocation != '/otp-verification' &&
+            state.matchedLocation != '/email-verification' &&
+            state.matchedLocation != '/complete-profile') {
+          return '/auth';
+        }
+        return null;
+      }
+
+      // Si está autenticado pero el perfil no está completo
+      if (isAuthenticated && !isProfileComplete) {
+        if (state.matchedLocation != '/complete-profile') {
+          return '/complete-profile';
+        }
+        return null;
+      }
+
+      // Si está autenticado y el perfil está completo, pero está en una ruta de autenticación
+      if (isAuthenticated &&
+          isProfileComplete &&
+          (state.matchedLocation == '/auth' ||
+              state.matchedLocation == '/phone-login' ||
+              state.matchedLocation == '/otp-verification' ||
+              state.matchedLocation == '/email-verification' ||
+              state.matchedLocation == '/complete-profile')) {
+        return '/location-permission';
+      }
+
+      // Si está en la pantalla de permisos de ubicación, permitir que continúe
+      if (state.matchedLocation == '/location-permission') {
+        return null;
+      }
+
+      return null;
+    },
   );
 });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logger/logger.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phone;
@@ -15,6 +16,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   String? _errorMessage;
   bool _isLoading = false;
   bool _success = false;
+  final _logger = Logger();
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -29,58 +36,132 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       _success = false;
     });
     try {
-      // Permitir bypass para pruebas locales con código 000000
-      if (_otpController.text.trim() == '000000') {
+      final otp = _otpController.text.trim();
+
+      // Código bypass para desarrollo - navegar directamente sin autenticación
+      if (otp == '000000') {
+        _logger.i(
+          'Usando código bypass 000000 para pruebas - navegando directamente',
+        );
         setState(() {
           _success = true;
         });
-        await Future.delayed(const Duration(milliseconds: 1200));
+
+        // En modo bypass, navegamos directamente a completar perfil
+        // pasando los parámetros necesarios
+        _logger.i('Bypass: navegando directamente a completar perfil');
         if (!mounted) return;
-        final user = Supabase.instance.client.auth.currentUser;
-        final String? email = user?.email;
-        if (email == null || email.isEmpty) {
-          context.go('/complete-profile');
-        } else {
-          context.go('/location-permission');
-        }
+        context.go(
+          '/complete-profile?phone=${Uri.encodeComponent(widget.phone)}&otp=$otp&bypass=true',
+        );
         return;
       }
+
+      _logger.i('Verificando OTP: $otp para teléfono: ${widget.phone}');
       final AuthResponse response = await Supabase.instance.client.auth
-          .verifyOTP(
-            type: OtpType.sms,
-            phone: widget.phone,
-            token: _otpController.text.trim(),
-          );
+          .verifyOTP(type: OtpType.sms, phone: widget.phone, token: otp);
+
+      _logger.i('=== RESPUESTA VERIFY OTP ===');
+      _logger.i('Session no nula: ${response.session != null}');
+      _logger.i('User no nulo: ${response.user != null}');
+      if (response.session != null) {
+        _logger.i(
+          'Access Token: ${response.session!.accessToken.substring(0, 20)}...',
+        );
+        _logger.i(
+          'Refresh Token no nulo: ${response.session!.refreshToken != null}',
+        );
+        _logger.i('User ID: ${response.session!.user.id}');
+        _logger.i('User Phone: ${response.session!.user.phone}');
+        _logger.i('User Email: ${response.session!.user.email}');
+      }
+
+      _logger.i('=== USUARIO ACTUAL ANTES DEL DELAY ===');
+      final userBeforeDelay = Supabase.instance.client.auth.currentUser;
+      _logger.i('Current User no nulo: ${userBeforeDelay != null}');
+      if (userBeforeDelay != null) {
+        _logger.i('Current User ID: ${userBeforeDelay.id}');
+        _logger.i('Current User Phone: ${userBeforeDelay.phone}');
+        _logger.i('Current User Email: ${userBeforeDelay.email}');
+      }
+
       if (response.session != null) {
         setState(() {
           _success = true;
         });
-        await Future.delayed(const Duration(milliseconds: 1200));
-        if (!mounted) return;
-        final user = Supabase.instance.client.auth.currentUser;
-        final String? email = user?.email;
+
+        // Intentar refrescar la sesión para asegurar que esté correctamente establecida
+        try {
+          _logger.i('Intentando refrescar la sesión...');
+          final refreshResponse =
+              await Supabase.instance.client.auth.refreshSession();
+          _logger.i(
+            'Sesión refrescada exitosamente: ${refreshResponse.session != null}',
+          );
+        } catch (e) {
+          _logger.w('Error al refrescar la sesión: $e');
+        }
+
+        // Delay para asegurar que la sesión se establezca completamente
+        await Future.delayed(const Duration(milliseconds: 1000));
+
+        _logger.i('=== USUARIO ACTUAL DESPUÉS DEL DELAY ===');
+        final currentUser = Supabase.instance.client.auth.currentUser;
+        _logger.i('Current User no nulo: ${currentUser != null}');
+        if (currentUser != null) {
+          _logger.i('Current User ID: ${currentUser.id}');
+          _logger.i('Current User Phone: ${currentUser.phone}');
+          _logger.i('Current User Email: ${currentUser.email}');
+          _logger.i('Current User JSON: ${currentUser.toJson()}');
+        }
+
+        if (currentUser == null) {
+          _logger.e(
+            'CRÍTICO: Usuario no autenticado después de verifyOTP, refresh y delay',
+          );
+          setState(() {
+            _errorMessage = 'Error en la autenticación. Intenta nuevamente.';
+          });
+          return;
+        }
+
+        final user = response.user;
+        String? email = user?.email;
         if (email == null || email.isEmpty) {
-          context.go('/complete-profile');
+          _logger.i('Usuario sin email, navegando a completar perfil');
+          if (!mounted) return;
+          context.go(
+            '/complete-profile?phone=${Uri.encodeComponent(widget.phone)}&otp=$otp',
+          );
+          return;
         } else {
+          _logger.i('Usuario con email, navegando a permisos de ubicación');
+          if (!mounted) return;
           context.go('/location-permission');
+          return;
         }
       } else {
+        _logger.w('Código OTP incorrecto o expirado');
         setState(() {
           _errorMessage = 'Código incorrecto o expirado.';
         });
       }
     } on AuthException catch (err) {
+      _logger.e('Error de autenticación: ${err.message}');
       setState(() {
         _errorMessage = err.message;
       });
-    } catch (_) {
+    } catch (e) {
+      _logger.e('Error inesperado: $e');
       setState(() {
         _errorMessage = 'Ocurrió un error inesperado.';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

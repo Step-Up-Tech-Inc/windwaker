@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:windwaker/core/config/di_config.dart';
+import 'package:windwaker/core/services/auth_service.dart';
+import 'package:windwaker/core/services/app_intro_service.dart';
 
 /// Pantalla de carga inicial de la aplicación.
 class SplashScreen extends StatefulWidget {
@@ -13,12 +16,36 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), _navigateToAuthGate);
+    Future.delayed(const Duration(seconds: 2), _checkAuthAndNavigate);
   }
 
-  void _navigateToAuthGate() {
+  Future<void> _checkAuthAndNavigate() async {
     if (!mounted) return;
-    context.go('/auth');
+
+    final authService = getIt<AuthService>();
+    final appIntroService = getIt<AppIntroService>();
+
+    // Verificar si el usuario ya vio la introducción
+    final hasSeenIntro = await appIntroService.hasSeenIntro();
+    if (!hasSeenIntro) {
+      if (!mounted) return;
+      context.go('/app-intro');
+      return;
+    }
+
+    // Verificar si el usuario está autenticado
+    final isAuthenticated = authService.isAuthenticated();
+    final isProfileComplete = authService.isProfileComplete();
+
+    if (!mounted) return;
+
+    if (!isAuthenticated) {
+      context.go('/auth');
+    } else if (!isProfileComplete) {
+      context.go('/complete-profile');
+    } else {
+      context.go('/location-permission');
+    }
   }
 
   @override
