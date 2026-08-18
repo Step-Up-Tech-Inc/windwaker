@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get_it/get_it.dart';
 import '../../core/models/cart_item.dart';
+import '../../core/repositories/address_repository.dart';
 import '../../core/repositories/cart_repository.dart';
 import '../../core/services/order_service.dart';
+import '../../core/services/preferences_service.dart';
 import 'cubit/checkout_cubit.dart';
 import 'cubit/checkout_state.dart';
 import 'widgets/address_form.dart';
@@ -39,6 +41,8 @@ class CheckoutScreen extends HookWidget {
           (context) => CheckoutCubit(
             cartRepository: GetIt.I<CartRepository>(),
             orderService: GetIt.I<OrderService>(),
+            addressRepository: GetIt.I<AddressRepository>(),
+            preferences: GetIt.I<PreferencesService>(),
             cartItems: cartItems,
             subtotal: subtotal,
             tax: tax,

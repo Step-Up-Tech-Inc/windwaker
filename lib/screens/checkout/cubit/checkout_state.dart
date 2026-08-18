@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../../../core/models/address.dart';
 import '../../../core/models/cart_item.dart';
 
 part 'checkout_state.freezed.dart';
@@ -11,7 +12,10 @@ class CheckoutState with _$CheckoutState {
     @Default(false) bool isLoading,
     @Default(null) String? error,
     @Default([]) List<CartItem> cartItems,
+    @Default([]) List<Address> savedAddresses,
     @Default('') String address,
+    double? latitude,
+    double? longitude,
     @Default('') String addressNickname,
     @Default('Casa') String addressType,
     @Default('') String deliveryInstructions,

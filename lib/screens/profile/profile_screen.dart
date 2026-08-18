@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:windwaker/core/config/di_config.dart';
-import 'package:windwaker/core/services/auth_service.dart';
-import 'package:windwaker/core/repositories/user_repository.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logger/logger.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logger/logger.dart';
+import 'package:windwaker/core/config/di_config.dart';
+import 'package:windwaker/core/config/locale_controller.dart';
+import 'package:windwaker/core/repositories/user_repository.dart';
+import 'package:windwaker/core/services/notification_service.dart';
+import 'package:windwaker/core/services/preferences_service.dart';
+import 'package:windwaker/core/services/profile_validation_service.dart';
+import 'package:windwaker/screens/search/widgets/bottom_navigation.dart';
 
+/// Pantalla de perfil del usuario (estilo lista de opciones).
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -15,120 +21,45 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late final AuthService _authService;
-  late final UserRepository _userRepository;
   final _logger = Logger();
-  String? _email;
-  String? _phone;
-  bool _isLoading = false;
-  String? _diagnosticResult;
-  bool _hasSessionError = false;
+  late final ProfileValidationService _profileValidationService;
+
+  bool _isLoading = true;
+  Map<String, dynamic>? _profileData;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _authService = getIt<AuthService>();
-    _userRepository = getIt<UserRepository>();
-    _loadUserData();
+    _profileValidationService = getIt<ProfileValidationService>();
+    _loadProfileData();
   }
 
-  Future<void> _loadUserData() async {
-    setState(() {
-      _isLoading = true;
-      _hasSessionError = false;
-    });
-
+  Future<void> _loadProfileData() async {
     try {
-      // Verificar y refrescar la sesión si es necesario
-      final sessionValid = await _authService.verifyAndRefreshSession();
-
-      if (!sessionValid) {
-        _logger.w(
-          'La sesión no es válida, verificando datos en SharedPreferences',
-        );
-
-        // Intentar cargar datos desde SharedPreferences
-        final prefs = getIt<SharedPreferences>();
-        final email = prefs.getString('user_email');
-        final phone = prefs.getString('user_phone');
-
-        if (email != null || phone != null) {
-          _logger.i(
-            'Datos encontrados en SharedPreferences: email=$email, phone=$phone',
-          );
-          setState(() {
-            _email = email;
-            _phone = phone;
-            _hasSessionError = false;
-            _diagnosticResult =
-                'Usando datos de SharedPreferences. La sesión de Supabase no está activa.';
-          });
-          return;
-        }
-
-        if (!mounted) return;
-
+      setState(() => _isLoading = true);
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
         setState(() {
-          _hasSessionError = true;
+          _errorMessage = 'No hay usuario autenticado';
           _isLoading = false;
         });
-
-        // Mostrar mensaje de error
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'La sesión ha expirado. Usa el botón de emergencia para cerrar sesión.',
-            ),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 5),
-          ),
-        );
         return;
       }
-
-      // Cargar datos del usuario
-      _email = _authService.getUserEmail();
-      _phone = _authService.getUserPhone();
-
-      _logger.i('Datos de usuario cargados: email=$_email, phone=$_phone');
-    } catch (e) {
-      _logger.e('Error al cargar datos del usuario: $e');
-
-      // Intentar cargar datos desde SharedPreferences como respaldo
-      try {
-        final prefs = getIt<SharedPreferences>();
-        final email = prefs.getString('user_email');
-        final phone = prefs.getString('user_phone');
-
-        if (email != null || phone != null) {
-          _logger.i('Usando datos de respaldo: email=$email, phone=$phone');
-          setState(() {
-            _email = email;
-            _phone = phone;
-            _hasSessionError = false;
-            _diagnosticResult = 'Usando datos de respaldo. Error original: $e';
-          });
-          return;
-        }
-      } catch (prefError) {
-        _logger.e('Error al cargar datos de respaldo: $prefError');
-      }
-
-      // Mostrar mensaje de error
+      final profileData = await _profileValidationService.getUserProfileData(
+        currentUser.id,
+      );
       if (mounted) {
         setState(() {
-          _hasSessionError = true;
+          _profileData = profileData;
+          _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar datos: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
-    } finally {
+    } catch (e) {
+      _logger.e('Error cargando datos del perfil: $e');
       if (mounted) {
         setState(() {
+          _errorMessage = 'Error cargando perfil: $e';
           _isLoading = false;
         });
       }
@@ -136,610 +67,535 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _signOut() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    await _authService.signOut();
-
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (!mounted) return;
-    context.go('/auth');
-  }
-
-  void _goToEmergencyLogout() {
-    context.go('/emergency-logout');
-  }
-
-  Future<void> _runDiagnostic() async {
-    setState(() {
-      _isLoading = true;
-      _diagnosticResult = null;
-    });
-
     try {
-      _logger.i('Ejecutando diagnóstico de tabla profiles...');
-
-      // Verificar si hay un usuario autenticado
-      final currentUser = _userRepository.getCurrentUser();
-      final prefs = getIt<SharedPreferences>();
-      final email = prefs.getString('user_email');
-      final phone = prefs.getString('user_phone');
-
-      _logger.i('Datos en SharedPreferences: email=$email, phone=$phone');
-
-      if (currentUser == null) {
-        _logger.w('No hay usuario autenticado en Supabase');
-
-        // Verificar si hay información en SharedPreferences
-        if (email == null && phone == null) {
-          setState(() {
-            _diagnosticResult =
-                'ERROR: No hay usuario autenticado ni datos en SharedPreferences.\n'
-                'Debes iniciar sesión antes de ejecutar el diagnóstico.\n'
-                'Intenta cerrar sesión y volver a iniciarla.';
-          });
-          return;
-        }
-
-        _logger.i('Usando datos de SharedPreferences para diagnóstico');
-        setState(() {
-          _diagnosticResult =
-              'No hay usuario autenticado en Supabase, pero hay datos en SharedPreferences:\n'
-              'Email: $email\n'
-              'Teléfono: $phone\n\n'
-              'Intentando buscar perfil por teléfono...';
-        });
-
-        // Intentar buscar el perfil por teléfono
-        try {
-          if (phone != null) {
-            final data =
-                await Supabase.instance.client
-                    .from('profiles')
-                    .select('id, email, phone')
-                    .eq('phone', phone)
-                    .maybeSingle();
-
-            if (data != null) {
-              setState(() {
-                _diagnosticResult =
-                    '$_diagnosticResult\n\nPerfil encontrado: $data';
-              });
-            } else {
-              setState(() {
-                _diagnosticResult =
-                    '$_diagnosticResult\n\nNo se encontró perfil para el teléfono: $phone';
-              });
-            }
-          }
-        } catch (e) {
-          setState(() {
-            _diagnosticResult =
-                '$_diagnosticResult\n\nError al buscar perfil: $e';
-          });
-        }
-
-        return;
-      }
-
-      _logger.i('Usuario autenticado: ${currentUser.id}');
-
-      final result = await _userRepository.verifyProfilesTable();
-
-      setState(() {
-        _diagnosticResult = 'Resultado del diagnóstico: ${result.toString()}';
-      });
-
-      _logger.i('Diagnóstico completado: $result');
-
-      // Intentar actualizar el perfil del usuario actual
-      try {
-        // Obtener email y teléfono de SharedPreferences si no están disponibles
-        String? userEmail = currentUser.email;
-        String? userPhone = currentUser.phone;
-
-        if (userEmail == null || userEmail.isEmpty) {
-          userEmail = email;
-          _logger.i('Usando email de SharedPreferences: $userEmail');
-        }
-
-        if (userPhone == null || userPhone.isEmpty) {
-          userPhone = phone;
-          _logger.i('Usando teléfono de SharedPreferences: $userPhone');
-        }
-
-        await _userRepository.createOrUpdateUserProfile(
-          userId: currentUser.id,
-          email: userEmail,
-          phone: userPhone,
-        );
-        _logger.i('Perfil actualizado durante diagnóstico');
-
-        // Actualizar el diagnóstico con el resultado
-        final updatedProfile = await _userRepository.getUserProfile(
-          currentUser.id,
-        );
-        setState(() {
-          _diagnosticResult =
-              '$_diagnosticResult\n\nPerfil actualizado: $updatedProfile';
-        });
-      } catch (e) {
-        _logger.e('Error al actualizar perfil durante diagnóstico: $e');
-        setState(() {
-          _diagnosticResult =
-              '$_diagnosticResult\n\nError al actualizar perfil: $e';
-        });
-      }
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) context.go('/auth');
     } catch (e) {
-      _logger.e('Error al ejecutar diagnóstico: $e');
-      setState(() {
-        _diagnosticResult = 'Error al ejecutar diagnóstico: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      _logger.e('Error al cerrar sesión: $e');
     }
   }
 
-  Future<void> _refreshSession() async {
-    setState(() {
-      _isLoading = true;
-      _diagnosticResult = 'Intentando refrescar la sesión...';
-    });
+  /// Diálogo de notificaciones: activar/desactivar push.
+  Future<void> _showNotificationsDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final notifications = getIt<NotificationService>();
 
-    try {
-      // Obtener la sesión actual
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) {
-        _logger.w('No hay sesión activa para refrescar');
-        setState(() {
-          _diagnosticResult =
-              'No hay sesión activa para refrescar.\n'
-              'Debes iniciar sesión nuevamente.';
-          _hasSessionError = true;
-        });
-        return;
-      }
-
-      // Refrescar la sesión
-      final response = await Supabase.instance.client.auth.refreshSession();
-      if (response.session != null) {
-        _logger.i('Sesión refrescada con éxito');
-
-        // Recargar datos del usuario
-        await _loadUserData();
-
-        setState(() {
-          _diagnosticResult =
-              'Sesión refrescada con éxito.\n'
-              'Usuario: ${response.user?.id}\n'
-              'Email: ${response.user?.email}\n'
-              'Teléfono: ${response.user?.phone}';
-          _hasSessionError = false;
-        });
-      } else {
-        _logger.w('No se pudo refrescar la sesión');
-        setState(() {
-          _diagnosticResult =
-              'No se pudo refrescar la sesión.\n'
-              'Debes iniciar sesión nuevamente.';
-          _hasSessionError = true;
-        });
-      }
-    } catch (e) {
-      _logger.e('Error al refrescar la sesión: $e');
-      setState(() {
-        _diagnosticResult = 'Error al refrescar la sesión: $e';
-        _hasSessionError = true;
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _syncProfileWithSupabase() async {
-    setState(() {
-      _isLoading = true;
-      _diagnosticResult = 'Sincronizando perfil con Supabase...';
-    });
-
-    try {
-      final prefs = getIt<SharedPreferences>();
-      final email = prefs.getString('user_email');
-      final phone = prefs.getString('user_phone');
-
-      if (email == null && phone == null) {
-        setState(() {
-          _diagnosticResult =
-              'No hay datos para sincronizar. Necesitas completar tu perfil primero.';
-        });
-        return;
-      }
-
-      _logger.i('Datos para sincronizar: email=$email, phone=$phone');
-
-      // Verificar si hay un usuario autenticado en Supabase
-      final currentUser = Supabase.instance.client.auth.currentUser;
-
-      if (currentUser == null) {
-        _logger.w('No hay usuario autenticado en Supabase');
-
-        // Intentar buscar el perfil por teléfono
-        if (phone != null) {
-          try {
-            final data =
-                await Supabase.instance.client
-                    .from('profiles')
-                    .select('id, email, phone')
-                    .eq('phone', phone)
-                    .maybeSingle();
-
-            if (data != null) {
-              _logger.i('Perfil encontrado por teléfono: $data');
-              setState(() {
-                _diagnosticResult =
-                    'Encontrado perfil en Supabase por teléfono:\n$data\n\nActualizando...';
-              });
-
-              // Actualizar el perfil si el email no coincide
-              if (email != null && data['email'] != email) {
-                try {
-                  final updateSql =
-                      "UPDATE profiles SET email = '$email', updated_at = NOW() WHERE id = '${data['id']}';";
-                  await Supabase.instance.client.rpc(
-                    'exec_sql',
-                    params: {'sql': updateSql},
-                  );
-
-                  // Verificar actualización
-                  final updated =
-                      await Supabase.instance.client
-                          .from('profiles')
-                          .select('id, email, phone')
-                          .eq('id', data['id'])
-                          .single();
-
-                  setState(() {
-                    _diagnosticResult =
-                        '$_diagnosticResult\n\nPerfil actualizado:\n$updated';
-                  });
-                } catch (e) {
-                  _logger.e('Error al actualizar perfil: $e');
-                  setState(() {
-                    _diagnosticResult =
-                        '$_diagnosticResult\n\nError al actualizar perfil: $e';
-                  });
-                }
-              } else {
-                setState(() {
-                  _diagnosticResult =
-                      '$_diagnosticResult\n\nEl perfil ya está actualizado.';
-                });
-              }
-            } else {
-              _logger.w('No se encontró perfil para el teléfono: $phone');
-              setState(() {
-                _diagnosticResult =
-                    'No se encontró perfil en Supabase para el teléfono: $phone';
-              });
-            }
-          } catch (e) {
-            _logger.e('Error al buscar perfil por teléfono: $e');
-            setState(() {
-              _diagnosticResult = 'Error al buscar perfil por teléfono: $e';
-            });
-          }
-        } else {
-          setState(() {
-            _diagnosticResult =
-                'No hay teléfono para buscar el perfil y no hay usuario autenticado.';
-          });
-        }
-      } else {
-        // Hay usuario autenticado, actualizar su perfil
-        _logger.i('Usuario autenticado: ${currentUser.id}');
-
-        try {
-          // Verificar si el perfil existe
-          final profile = await _userRepository.getUserProfile(currentUser.id);
-
-          if (profile == null) {
-            _logger.w(
-              'No se encontró perfil para el usuario, creando uno nuevo',
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: Text(l10n.notifications),
+              content: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  notifications.enabled
+                      ? l10n.notificationsEnabled
+                      : l10n.notificationsDisabled,
+                ),
+                subtitle: Text(l10n.notificationsDescription),
+                value: notifications.enabled,
+                onChanged: (value) async {
+                  await notifications.setEnabled(value);
+                  setDialogState(() {});
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.save),
+                ),
+              ],
             );
-            setState(() {
-              _diagnosticResult =
-                  'No se encontró perfil para el usuario, creando uno nuevo...';
-            });
+          },
+        );
+      },
+    );
+    if (mounted) setState(() {});
+  }
 
-            // Crear perfil con SQL directo
-            try {
-              final createSql = '''
-              INSERT INTO profiles (id, email, phone, created_at, updated_at)
-              VALUES ('${currentUser.id}', ${email != null ? "'$email'" : 'NULL'}, ${phone != null ? "'$phone'" : 'NULL'}, NOW(), NOW());
-              ''';
+  /// Diálogo de método de pago preferido (efectivo / SINPE Móvil).
+  Future<void> _showPaymentDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final preferences = getIt<PreferencesService>();
 
-              await Supabase.instance.client.rpc(
-                'exec_sql',
-                params: {'sql': createSql},
-              );
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: Text(l10n.paymentMethods),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.preferredPaymentDescription,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.cash),
+                    secondary: const Icon(Icons.payments_outlined),
+                    value: 'cash',
+                    groupValue: preferences.preferredPaymentMethod,
+                    onChanged: (value) async {
+                      await preferences.setPreferredPaymentMethod(value!);
+                      setDialogState(() {});
+                    },
+                  ),
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.sinpe),
+                    secondary: const Icon(Icons.phone_iphone),
+                    value: 'sinpe',
+                    groupValue: preferences.preferredPaymentMethod,
+                    onChanged: (value) async {
+                      await preferences.setPreferredPaymentMethod(value!);
+                      setDialogState(() {});
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.save),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (mounted) setState(() {});
+  }
 
-              // Verificar creación
-              final created = await _userRepository.getUserProfile(
-                currentUser.id,
-              );
+  /// Diálogo de idioma (español / inglés).
+  Future<void> _showLanguageDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final localeController = getIt<LocaleController>();
 
-              setState(() {
-                _diagnosticResult = 'Perfil creado:\n$created';
-              });
-            } catch (e) {
-              _logger.e('Error al crear perfil: $e');
-              setState(() {
-                _diagnosticResult = 'Error al crear perfil: $e';
-              });
-            }
-          } else {
-            _logger.i('Perfil encontrado: $profile');
-            setState(() {
-              _diagnosticResult =
-                  'Perfil encontrado en Supabase:\n$profile\n\nVerificando si necesita actualización...';
-            });
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.language),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final option in const [('es', 'Español'), ('en', 'English')])
+                RadioListTile<String>(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(option.$2),
+                  value: option.$1,
+                  groupValue: localeController.value.languageCode,
+                  onChanged: (value) async {
+                    await localeController.setLanguage(value!);
+                    if (dialogContext.mounted) {
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (mounted) setState(() {});
+  }
 
-            // Verificar si necesita actualización
-            bool needsUpdate = false;
+  /// Edición del perfil: nombre y foto.
+  Future<void> _showEditDialog() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
 
-            if (email != null &&
-                email.isNotEmpty &&
-                profile['email'] != email) {
-              _logger.w('Email desactualizado en el perfil');
-              needsUpdate = true;
-            }
-
-            if (phone != null &&
-                phone.isNotEmpty &&
-                profile['phone'] != phone) {
-              _logger.w('Teléfono desactualizado en el perfil');
-              needsUpdate = true;
-            }
-
-            if (needsUpdate) {
-              _logger.i('El perfil necesita actualización');
-              setState(() {
-                _diagnosticResult =
-                    '$_diagnosticResult\n\nEl perfil necesita actualización. Actualizando...';
-              });
-
-              // Actualizar perfil con SQL directo
-              try {
-                // Construir la parte SET del SQL
-                String setSql = "";
-                if (email != null) setSql += "email = '$email', ";
-                if (phone != null) setSql += "phone = '$phone', ";
-                setSql += "updated_at = NOW()";
-
-                final updateSql =
-                    "UPDATE profiles SET $setSql WHERE id = '${currentUser.id}';";
-
-                await Supabase.instance.client.rpc(
-                  'exec_sql',
-                  params: {'sql': updateSql},
-                );
-
-                // Verificar actualización
-                final updated = await _userRepository.getUserProfile(
-                  currentUser.id,
-                );
-
-                setState(() {
-                  _diagnosticResult =
-                      '$_diagnosticResult\n\nPerfil actualizado:\n$updated';
-                });
-              } catch (e) {
-                _logger.e('Error al actualizar perfil: $e');
-                setState(() {
-                  _diagnosticResult =
-                      '$_diagnosticResult\n\nError al actualizar perfil: $e';
-                });
-              }
-            } else {
-              _logger.i('El perfil ya está actualizado');
-              setState(() {
-                _diagnosticResult =
-                    '$_diagnosticResult\n\nEl perfil ya está actualizado.';
-              });
-            }
-          }
-        } catch (e) {
-          _logger.e('Error al verificar/actualizar perfil: $e');
-          setState(() {
-            _diagnosticResult = 'Error al verificar/actualizar perfil: $e';
-          });
-        }
-      }
-    } catch (e) {
-      _logger.e('Error general al sincronizar perfil: $e');
-      setState(() {
-        _diagnosticResult = 'Error general al sincronizar perfil: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    await showDialog<void>(
+      context: context,
+      builder:
+          (_) => _EditProfileDialog(
+            userId: user.id,
+            initialName: (_profileData?['full_name'] as String?) ?? '',
+          ),
+    );
+    await _loadProfileData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi Perfil')),
+      backgroundColor: const Color(0xFFF5F6FA),
+      appBar: AppBar(
+        title: Text(
+          AppLocalizations.of(context)!.myProfile,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          tooltip: 'Volver',
+          onPressed: () => context.go('/home'),
+        ),
+      ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _hasSessionError
-              ? _buildSessionErrorView()
-              : _buildProfileView(),
+              : _errorMessage != null
+              ? Center(child: Text(_errorMessage!))
+              : _buildContent(),
+      bottomNavigationBar: const BottomNavigation(currentIndex: 3),
     );
   }
 
-  Widget _buildSessionErrorView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 64),
-            const SizedBox(height: 16),
-            const Text(
-              'Error de Sesión',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Se ha detectado un problema con tu sesión. Esto puede deberse a que la sesión ha expirado o ha sido invalidada.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _refreshSession,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+  Widget _buildContent() {
+    final l10n = AppLocalizations.of(context)!;
+    final avatarUrl = _profileData?['avatar_url'] as String?;
+    final fullName = _profileData?['full_name'] as String?;
+
+    return ListView(
+      children: [
+        // ── Encabezado ──
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: _showEditDialog,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: const Color(0xFF2979FF),
+                      backgroundImage:
+                          (avatarUrl?.isNotEmpty ?? false)
+                              ? NetworkImage(avatarUrl!)
+                              : null,
+                      child:
+                          (avatarUrl?.isNotEmpty ?? false)
+                              ? null
+                              : const Icon(
+                                Icons.person,
+                                size: 40,
+                                color: Colors.white,
+                              ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF2979FF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.photo_camera,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: const Text('INTENTAR REFRESCAR SESIÓN'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _goToEmergencyLogout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      (fullName?.isNotEmpty ?? false)
+                          ? fullName!
+                          : l10n.defaultUserName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _profileData?['phone'] ?? '',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    Text(
+                      _profileData?['email'] ?? '',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
                 ),
               ),
-              child: const Text('IR A CIERRE DE SESIÓN DE EMERGENCIA'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── Grupo 1 ──
+        _MenuGroup(
+          items: [
+            _MenuItem(
+              icon: Icons.person,
+              color: const Color(0xFF2979FF),
+              title: l10n.personalInfo,
+              onTap: _showEditDialog,
+            ),
+            _MenuItem(
+              icon: Icons.place,
+              color: const Color(0xFF7C4DFF),
+              title: l10n.savedAddresses,
+              onTap: () => context.go('/addresses'),
+            ),
+            _MenuItem(
+              icon: Icons.payment,
+              color: const Color(0xFF00C853),
+              title: l10n.paymentMethods,
+              trailingText:
+                  getIt<PreferencesService>().preferredPaymentMethod == 'cash'
+                      ? l10n.cash
+                      : l10n.sinpe,
+              onTap: _showPaymentDialog,
             ),
           ],
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 12),
 
-  Widget _buildProfileView() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-          const SizedBox(height: 16),
-          if (_email != null)
-            ListTile(
-              leading: const Icon(Icons.email),
-              title: const Text('Correo electrónico'),
-              subtitle: Text(_email!),
+        // ── Grupo 2 ──
+        _MenuGroup(
+          items: [
+            _MenuItem(
+              icon: Icons.history,
+              color: const Color(0xFFFF9100),
+              title: l10n.orderHistory,
+              onTap: () => context.go('/order-history'),
             ),
-          if (_phone != null)
-            ListTile(
-              leading: const Icon(Icons.phone),
-              title: const Text('Teléfono'),
-              subtitle: Text(_phone!),
-            ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _signOut,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Cerrar sesión'),
-          ),
-          const SizedBox(height: 32),
-          const Text(
-            'Herramientas de diagnóstico',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _runDiagnostic,
-                  child: const Text('Ejecutar diagnóstico'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _refreshSession,
-                  child: const Text('Refrescar sesión'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _syncProfileWithSupabase,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                  ),
-                  child: const Text('Sincronizar perfil'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _goToEmergencyLogout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                  ),
-                  child: const Text('Cierre de emergencia'),
-                ),
-              ),
-            ],
-          ),
-          if (_diagnosticResult != null) ...[
-            const SizedBox(height: 16),
-            const Text(
-              'Resultado del diagnóstico:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    _diagnosticResult!,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
+            _MenuItem(
+              icon: Icons.notifications,
+              color: const Color(0xFFFF5252),
+              title: l10n.notifications,
+              trailingText:
+                  getIt<NotificationService>().enabled
+                      ? l10n.notificationsEnabled
+                      : l10n.notificationsDisabled,
+              onTap: _showNotificationsDialog,
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+
+        // ── Grupo 3 ──
+        _MenuGroup(
+          items: [
+            _MenuItem(
+              icon: Icons.language,
+              color: const Color(0xFF00BFA5),
+              title: l10n.language,
+              trailingText:
+                  getIt<LocaleController>().value.languageCode == 'es'
+                      ? 'Español'
+                      : 'English',
+              onTap: _showLanguageDialog,
+            ),
+            _MenuItem(
+              icon: Icons.support_agent,
+              color: const Color(0xFF536DFE),
+              title: l10n.helpSupport,
+              onTap: () => context.go('/help'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // ── Cerrar sesión ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FilledButton(
+            onPressed: _signOut,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFFFEBEE),
+              foregroundColor: Colors.red,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              l10n.signOut,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+}
+
+/// Diálogo de edición de perfil. Es un StatefulWidget para que el framework
+/// libere el TextEditingController DESPUÉS de que el diálogo salga del árbol
+/// (hacer dispose manual durante la animación de cierre crashea).
+class _EditProfileDialog extends StatefulWidget {
+  final String userId;
+  final String initialName;
+
+  const _EditProfileDialog({required this.userId, required this.initialName});
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  late final TextEditingController _nameController = TextEditingController(
+    text: widget.initialName,
+  );
+  final _logger = Logger();
+  XFile? _pickedImage;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      imageQuality: 80,
+    );
+    if (picked != null && mounted) {
+      setState(() => _pickedImage = picked);
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final userRepository = getIt<UserRepository>();
+      String? avatarUrl;
+      final image = _pickedImage;
+      if (image != null) {
+        avatarUrl = await userRepository.uploadAvatar(
+          userId: widget.userId,
+          fileName: image.name,
+          bytes: await image.readAsBytes(),
+        );
+      }
+      await userRepository.updateProfileDetails(
+        userId: widget.userId,
+        fullName: _nameController.text.trim(),
+        avatarUrl: avatarUrl,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      _logger.e('Error guardando perfil: $e');
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Información personal'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nameController,
+            maxLength: 80,
+            decoration: const InputDecoration(
+              labelText: 'Nombre completo',
+              border: OutlineInputBorder(),
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _pickImage,
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: Text(
+              _pickedImage?.name ?? 'Cambiar foto de perfil',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child:
+              _saving
+                  ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _MenuGroup extends StatelessWidget {
+  final List<_MenuItem> items;
+
+  const _MenuGroup({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      child: Column(children: items),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String? trailingText;
+  final VoidCallback onTap;
+
+  const _MenuItem({
+    required this.icon,
+    required this.color,
+    required this.title,
+    this.trailingText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      leading: CircleAvatar(
+        radius: 20,
+        backgroundColor: color.withAlpha(30),
+        child: Icon(icon, size: 20, color: color),
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 16)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (trailingText != null)
+            Text(
+              trailingText!,
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right, color: Colors.grey),
         ],
       ),
     );

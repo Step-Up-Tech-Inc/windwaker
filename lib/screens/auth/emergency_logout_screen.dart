@@ -18,7 +18,7 @@ class _EmergencyLogoutScreenState extends State<EmergencyLogoutScreen> {
   final _logger = Logger();
   bool _isLoading = false;
   String? _statusMessage;
-  late final AuthService _authService;
+  late AuthService _authService;
 
   @override
   void initState() {

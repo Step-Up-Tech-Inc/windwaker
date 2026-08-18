@@ -1,0 +1,818 @@
+openapi: 3.0.3
+info:
+  title: Tilarán en Línea — API completa
+  version: 1.0.0
+  description: |
+    API del marketplace de delivery para Tilarán, Guanacaste (Costa Rica).
+
+    ## Arquitectura
+    Construida sobre **Supabase**. Un mismo host expone cuatro superficies:
+    | Prefijo | Servicio | Uso |
+    |---------|----------|-----|
+    | `/auth/v1` | GoTrue (Auth) | registro, login, OTP, sesión |
+    | `/rest/v1` | PostgREST | tablas como REST, protegidas por RLS |
+    | `/rest/v1/rpc` | Funciones RPC | mutaciones críticas validadas en servidor |
+    | `/functions/v1` | Edge Functions | lógica con secretos del servidor |
+    | `/storage/v1` | Storage | imágenes de tiendas/productos y comprobantes |
+
+    ## Autenticación
+    Enviar en cada petición:
+    - `apikey: <ANON_KEY>` (identifica el proyecto)
+    - `Authorization: Bearer <ACCESS_TOKEN>` (JWT del usuario tras login)
+
+    La `anon key` es pública por diseño; el acceso real está gobernado por
+    **Row Level Security** según el rol: `customer`, `business`, `driver`, `admin`.
+
+    ## Reglas de negocio clave
+    - Las **mutaciones de pedidos NO usan REST directo**: pasan por RPCs
+      `SECURITY DEFINER` que calculan precios y validan la máquina de estados.
+    - Las tiendas nacen `pending` y solo venden tras aprobación de un admin.
+    - Pagos SINPE: el cliente sube comprobante → el negocio lo verifica antes
+      de poder aceptar el pedido.
+
+servers:
+  - url: https://carvqbtjhyyhpawponaq.supabase.co
+    description: Proyecto Supabase (producción/testing)
+
+security:
+  - apiKey: []
+    bearerAuth: []
+
+tags:
+  - name: Autenticación
+    description: Registro (teléfono→OTP→email+contraseña) e inicio de sesión.
+  - name: Perfil
+    description: Datos del usuario y su rol.
+  - name: Catálogo
+    description: Tiendas y productos (lectura pública de lo aprobado).
+  - name: Pedidos (RPC)
+    description: Creación y transiciones de estado validadas en el servidor.
+  - name: Pedidos
+    description: Lectura de pedidos e ítems (filtrada por RLS).
+  - name: Pagos SINPE
+    description: Comprobantes de SINPE Móvil y su verificación.
+  - name: Direcciones
+    description: Direcciones de entrega del cliente.
+  - name: Reseñas
+    description: Calificaciones de tiendas por pedido entregado.
+  - name: Soporte
+    description: Reportes de problemas.
+  - name: Storage
+    description: Subida de imágenes y comprobantes.
+  - name: Edge Functions
+    description: Verificación de cuenta, asignación de email y notificaciones.
+
+paths:
+  # ─────────────────────────── AUTENTICACIÓN ───────────────────────────
+  /auth/v1/otp:
+    post:
+      tags: [Autenticación]
+      summary: Enviar OTP por SMS (registro)
+      description: Envía un código de verificación al teléfono. En modo testing
+        el código es fijo (`123456`); en producción llega por SMS real.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string, example: "+50688888888" }
+      responses:
+        "200": { description: OTP enviado }
+        "429": { description: Rate limit (5/15 min por número) }
+
+  /auth/v1/verify:
+    post:
+      tags: [Autenticación]
+      summary: Verificar OTP del teléfono
+      description: Verifica el código SMS y devuelve la sesión (access +
+        refresh token). El usuario queda autenticado para completar su perfil.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, phone, token]
+              properties:
+                type: { type: string, enum: [sms] }
+                phone: { type: string, example: "+50688888888" }
+                token: { type: string, example: "123456" }
+      responses:
+        "200":
+          description: Sesión creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "401": { description: Código inválido }
+
+  /auth/v1/token:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión (correo o teléfono + contraseña)
+      description: |
+        `grant_type=password`. La app normaliza el teléfono a E.164 (+506) y
+        detecta si el identificador es correo o teléfono. Rate limit de la app:
+        **5 intentos / 15 min** por identificador (además del de GoTrue).
+      parameters:
+        - name: grant_type
+          in: query
+          required: true
+          schema: { type: string, enum: [password, refresh_token] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    email: { type: string }
+                    password: { type: string }
+                - type: object
+                  properties:
+                    phone: { type: string }
+                    password: { type: string }
+      responses:
+        "200":
+          description: Sesión creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "400": { description: Credenciales inválidas }
+
+  /auth/v1/user:
+    put:
+      tags: [Autenticación]
+      summary: Actualizar el usuario autenticado
+      description: Asigna la contraseña durante "completar perfil"
+        (`updateUser`). El email se asigna vía la Edge Function
+        `set-user-email` para que quede confirmado sin correo de verificación.
+      responses:
+        "200": { description: Usuario actualizado }
+
+  # ─────────────────────────── PEDIDOS (RPC) ───────────────────────────
+  /rest/v1/rpc/create_order:
+    post:
+      tags: [Pedidos (RPC)]
+      summary: Crear un pedido
+      description: |
+        El cliente envía solo ids de producto y cantidades; **el servidor
+        calcula precios y total** desde el catálogo. Valida: tienda existente,
+        aprobada y abierta; productos de la tienda; dirección obligatoria si es
+        delivery; y que la tienda acepte SINPE si ese es el método. Crea
+        `orders` + `order_items` (snapshot de nombre/precio) + primer registro
+        de historial. Los pedidos SINPE nacen con `payment_status = pending`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [p_store_id, p_delivery_method, p_payment_method, p_items]
+              properties:
+                p_store_id: { type: string, format: uuid }
+                p_delivery_method: { type: string, enum: [delivery, pickup] }
+                p_payment_method: { type: string, enum: [cash, sinpe] }
+                p_address_label: { type: string, nullable: true, maxLength: 60 }
+                p_address_detail: { type: string, nullable: true, maxLength: 500 }
+                p_latitude: { type: number, nullable: true }
+                p_longitude: { type: number, nullable: true }
+                p_notes: { type: string, nullable: true, maxLength: 500 }
+                p_items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [product_id, quantity]
+                    properties:
+                      product_id: { type: string, format: uuid }
+                      quantity: { type: integer, minimum: 1 }
+                      notes: { type: string, nullable: true }
+      responses:
+        "200":
+          description: UUID del pedido creado
+          content:
+            application/json:
+              schema: { type: string, format: uuid }
+        "400":
+          description: >-
+            Validación fallida (tienda cerrada/no aprobada, no acepta SINPE,
+            producto inexistente, dirección faltante, etc.)
+
+  /rest/v1/rpc/advance_order_status:
+    post:
+      tags: [Pedidos (RPC)]
+      summary: Avanzar el estado de un pedido
+      description: |
+        Máquina de estados validada por rol en el servidor:
+        - **Cliente**: `pending → cancelled`
+        - **Negocio dueño**: `pending → accepted|rejected`, `accepted →
+          preparing`, `preparing → ready`, `ready → delivered` (solo pickup)
+        - **Repartidor asignado**: `ready → picked_up`, `picked_up → delivered`
+
+        Un pedido SINPE **no puede pasar a `accepted`** sin `payment_status =
+        verified`. Cualquier otra transición devuelve error. Registra el cambio
+        en `order_status_history` (dispara notificación push).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [p_order_id, p_new_status]
+              properties:
+                p_order_id: { type: string, format: uuid }
+                p_new_status:
+                  type: string
+                  enum: [accepted, rejected, preparing, ready, picked_up, delivered, cancelled]
+      responses:
+        "204": { description: Transición aplicada }
+        "400": { description: Transición no permitida para el rol/estado, o pago SINPE sin verificar }
+
+  /rest/v1/rpc/claim_order:
+    post:
+      tags: [Pedidos (RPC)]
+      summary: Tomar un pedido (repartidor)
+      description: Asignación atómica sobre pedidos `ready` de delivery sin
+        repartidor. Si dos repartidores compiten, solo uno recibe `true`.
+        Requiere rol `driver`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [p_order_id]
+              properties:
+                p_order_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: true si quedó asignado a este repartidor
+          content:
+            application/json:
+              schema: { type: boolean }
+
+  /rest/v1/rpc/submit_payment_proof:
+    post:
+      tags: [Pagos SINPE]
+      summary: Registrar comprobante SINPE (cliente)
+      description: Tras subir la imagen al bucket privado `payment-proofs`,
+        registra la ruta y la referencia. El pago pasa a `submitted`. Permite
+        re-subir si fue `rejected`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [p_order_id, p_proof_path, p_reference]
+              properties:
+                p_order_id: { type: string, format: uuid }
+                p_proof_path: { type: string }
+                p_reference: { type: string, maxLength: 100 }
+      responses:
+        "204": { description: Comprobante registrado }
+        "400": { description: Pedido no es SINPE, ya verificado, o finalizado }
+
+  /rest/v1/rpc/review_sinpe_payment:
+    post:
+      tags: [Pagos SINPE]
+      summary: Aprobar/rechazar comprobante (negocio o admin)
+      description: El dueño de la tienda (o un admin) confirma el pago contra su
+        cuenta. `payment_status` pasa a `verified` o `rejected`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [p_order_id, p_approved]
+              properties:
+                p_order_id: { type: string, format: uuid }
+                p_approved: { type: boolean }
+      responses:
+        "204": { description: Pago revisado }
+        "400": { description: No hay comprobante pendiente, o sin permiso }
+
+  /rest/v1/rpc/search_stores:
+    post:
+      tags: [Catálogo]
+      summary: Buscar tiendas aprobadas
+      description: Búsqueda `ILIKE` por nombre, descripción o categoría. Solo
+        devuelve tiendas `approved`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [search_query]
+              properties:
+                search_query: { type: string }
+      responses:
+        "200":
+          description: Tiendas coincidentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Store" }
+
+  # ─────────────────────────── CATÁLOGO ───────────────────────────
+  /rest/v1/stores:
+    get:
+      tags: [Catálogo]
+      summary: Listar tiendas
+      description: |
+        RLS: clientes solo ven `approved`; el dueño ve la suya en cualquier
+        estado; admin ve todas. Soporta filtros PostgREST
+        (`?is_featured=eq.true`, `?select=*`, `?order=name`).
+      parameters:
+        - { name: select, in: query, schema: { type: string }, example: "*" }
+        - { name: category, in: query, schema: { type: string }, example: "eq.Restaurante" }
+        - { name: is_featured, in: query, schema: { type: string }, example: "eq.true" }
+      responses:
+        "200":
+          description: Tiendas visibles
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Store" } }
+    post:
+      tags: [Catálogo]
+      summary: Crear tienda (rol business)
+      description: Nace con `status = pending`. RLS exige `owner_id = auth.uid()`
+        y rol `business`.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StoreInput" }
+      responses:
+        "201": { description: Tienda creada pendiente de aprobación }
+    patch:
+      tags: [Catálogo]
+      summary: Actualizar tienda (dueño o admin)
+      description: El dueño edita su tienda (nombre, horario, abierto/cerrado,
+        SINPE); el admin puede aprobar/rechazar cambiando `status`.
+      responses:
+        "200": { description: Tienda actualizada }
+
+  /rest/v1/products:
+    get:
+      tags: [Catálogo]
+      summary: Listar productos (lectura pública)
+      parameters:
+        - { name: store_id, in: query, schema: { type: string }, example: "eq.<uuid>" }
+        - { name: is_deleted, in: query, schema: { type: string }, example: "eq.false" }
+      responses:
+        "200":
+          description: Productos
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Product" } }
+    post:
+      tags: [Catálogo]
+      summary: Crear producto (dueño de la tienda)
+      responses:
+        "201": { description: Producto creado }
+    patch:
+      tags: [Catálogo]
+      summary: Editar producto / marcar agotado / borrado suave
+      responses:
+        "200": { description: Producto actualizado }
+
+  /rest/v1/inventory:
+    get:
+      tags: [Catálogo]
+      summary: Inventario (lectura pública; escritura solo del dueño)
+      responses:
+        "200":
+          description: Niveles de inventario
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Inventory" } }
+
+  # ─────────────────────────── PEDIDOS ───────────────────────────
+  /rest/v1/orders:
+    get:
+      tags: [Pedidos]
+      summary: Listar pedidos (filtrados por RLS)
+      description: |
+        El RLS limita el resultado: el cliente ve los suyos; el negocio los de
+        su tienda; el repartidor los asignados a él más los `ready` sin
+        asignar. Realtime está habilitado en esta tabla para el seguimiento en
+        vivo. **No hay INSERT/UPDATE directo**: usar los RPC.
+      parameters:
+        - { name: select, in: query, schema: { type: string }, example: "*,order_items(*),stores(name,sinpe_number)" }
+        - { name: status, in: query, schema: { type: string }, example: "eq.pending" }
+        - { name: order, in: query, schema: { type: string }, example: "created_at.desc" }
+      responses:
+        "200":
+          description: Pedidos visibles para el usuario
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Order" } }
+
+  /rest/v1/order_items:
+    get:
+      tags: [Pedidos]
+      summary: Líneas de pedido (snapshot de nombre y precio)
+      responses:
+        "200":
+          description: Ítems visibles según el pedido padre (RLS)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+
+  /rest/v1/order_status_history:
+    get:
+      tags: [Pedidos]
+      summary: Línea de tiempo del pedido
+      description: Historial auditable de cambios de estado. Alimenta el
+        seguimiento del cliente.
+      responses:
+        "200":
+          description: Cambios de estado del pedido
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/OrderStatusHistory" } }
+
+  # ─────────────────────────── DIRECCIONES ───────────────────────────
+  /rest/v1/addresses:
+    get:
+      tags: [Direcciones]
+      summary: "Direcciones del usuario (RLS: solo las propias)"
+      responses:
+        "200":
+          description: Direcciones propias
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Address" } }
+    post:
+      tags: [Direcciones]
+      summary: Guardar dirección
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddressInput" }
+      responses:
+        "201": { description: Dirección creada }
+    patch:
+      tags: [Direcciones]
+      summary: Actualizar (p. ej. marcar predeterminada)
+      responses:
+        "200": { description: Dirección actualizada }
+    delete:
+      tags: [Direcciones]
+      summary: Eliminar dirección
+      responses:
+        "204": { description: Eliminada }
+
+  # ─────────────────────────── PERFIL ───────────────────────────
+  /rest/v1/profiles:
+    get:
+      tags: [Perfil]
+      summary: Perfiles (lectura pública; escritura solo del propio)
+      parameters:
+        - { name: id, in: query, schema: { type: string }, example: "eq.<uuid>" }
+      responses:
+        "200":
+          description: Perfiles
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Profile" } }
+    patch:
+      tags: [Perfil]
+      summary: Actualizar el propio perfil (nombre, avatar, fcm_token)
+      responses:
+        "200": { description: Perfil actualizado }
+
+  # ─────────────────────────── RESEÑAS ───────────────────────────
+  /rest/v1/reviews:
+    get:
+      tags: [Reseñas]
+      summary: Reseñas (lectura pública)
+      responses:
+        "200":
+          description: Reseñas
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Review" } }
+    post:
+      tags: [Reseñas]
+      summary: Crear reseña (cliente de un pedido entregado)
+      description: RLS exige que el pedido sea del cliente, de esa tienda y esté
+        `delivered`. Una reseña por pedido.
+      responses:
+        "201": { description: Reseña creada }
+
+  # ─────────────────────────── SOPORTE ───────────────────────────
+  /rest/v1/support_tickets:
+    get:
+      tags: [Soporte]
+      summary: "Listar mis reportes (RLS: propios; admin todos)"
+      responses:
+        "200":
+          description: Tickets visibles para el usuario
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/SupportTicket" } }
+    post:
+      tags: [Soporte]
+      summary: Reportar un problema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, type, message]
+              properties:
+                user_id: { type: string, format: uuid }
+                type: { type: string, enum: [order, store, app] }
+                message: { type: string, maxLength: 2000 }
+      responses:
+        "201": { description: Ticket creado }
+
+  # ─────────────────────────── STORAGE ───────────────────────────
+  /storage/v1/object/store-images/{path}:
+    post:
+      tags: [Storage]
+      summary: Subir imagen de tienda o producto (bucket público)
+      description: Lectura pública; escritura autenticada. Límite **5 MB**, solo
+        `image/jpeg|png|webp`. Rutas `stores/<uid>/…`, `products/<store>/…`.
+      parameters:
+        - { name: path, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Subida exitosa }
+
+  /storage/v1/object/payment-proofs/{path}:
+    post:
+      tags: [Storage]
+      summary: Subir comprobante SINPE (bucket PRIVADO)
+      description: |
+        Solo el cliente dueño del pedido puede subir; solo cliente, dueño de la
+        tienda y admin pueden leer (URL firmada temporal). Ruta
+        `<order_id>/<archivo>`. Límite 5 MB, solo imágenes.
+      parameters:
+        - { name: path, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Subida exitosa }
+
+  # ─────────────────────────── EDGE FUNCTIONS ───────────────────────────
+  /functions/v1/check-account:
+    post:
+      tags: [Edge Functions]
+      summary: ¿Existe una cuenta con este teléfono/email?
+      description: Pública (pre-auth). Usa la service_role key EN EL SERVIDOR y
+        solo devuelve un booleano. Rate limit 20/15 min por IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier]
+              properties:
+                identifier: { type: string, maxLength: 320 }
+                isEmail: { type: boolean }
+      responses:
+        "200":
+          description: Resultado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { exists: { type: boolean } }
+        "429": { description: Demasiados intentos }
+
+  /functions/v1/set-user-email:
+    post:
+      tags: [Edge Functions]
+      summary: Asignar email confirmado al usuario autenticado
+      description: Requiere sesión. Identifica al usuario por su JWT (no confía
+        en un id del cliente) y asigna el email vía Admin API sin correo de
+        verificación. La service_role key vive en el servidor.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200": { description: Email actualizado }
+        "409": { description: El correo ya pertenece a otra cuenta }
+
+  /functions/v1/notify-order:
+    post:
+      tags: [Edge Functions]
+      summary: Webhook interno de notificaciones (push FCM)
+      description: |
+        **No es de uso público.** La invoca únicamente el trigger de la tabla
+        `orders` (vía pg_net), firmada con el header `x-notify-secret`. Envía
+        push: negocio ← pedido nuevo · cliente ← cada cambio de estado ·
+        repartidores ← pedido `ready`.
+      responses:
+        "200": { description: Notificaciones despachadas }
+        "401": { description: Falta o no coincide el secreto compartido }
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: apikey
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Session:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, example: bearer }
+        expires_in: { type: integer }
+        user: { $ref: "#/components/schemas/AuthUser" }
+
+    AuthUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+
+    Profile:
+      type: object
+      properties:
+        id: { type: string, format: uuid, description: "Igual al UID de Auth" }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        role: { type: string, enum: [customer, business, driver, admin] }
+        full_name: { type: string, nullable: true }
+        avatar_url: { type: string, nullable: true }
+        fcm_token: { type: string, nullable: true, description: "Token de notificaciones push" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Store:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid, nullable: true }
+        name: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        image_url: { type: string }
+        category: { type: string }
+        rating: { type: number }
+        delivery_time_minutes: { type: integer }
+        delivery_fee: { type: number }
+        is_open: { type: boolean }
+        is_featured: { type: boolean }
+        is_deleted: { type: boolean }
+        status: { type: string, enum: [pending, approved, rejected] }
+        sinpe_number: { type: string, nullable: true, description: "SINPE Móvil donde recibe pagos" }
+        address: { type: string, nullable: true }
+        latitude: { type: number, nullable: true }
+        longitude: { type: number, nullable: true }
+        phone: { type: string, nullable: true }
+        schedule: { type: object, nullable: true, description: "Horario por día (JSONB)" }
+        created_at: { type: string, format: date-time }
+
+    StoreInput:
+      type: object
+      required: [owner_id, name, description, category]
+      properties:
+        owner_id: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        category: { type: string }
+        image_url: { type: string }
+        delivery_fee: { type: number }
+        delivery_time_minutes: { type: integer }
+
+    Product:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        store_id: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        image_url: { type: string }
+        category: { type: string }
+        price: { type: number }
+        unit: { type: string, example: unidad }
+        quantity: { type: number }
+        status: { type: integer, description: "0 = disponible, 1 = agotado" }
+        is_deleted: { type: boolean }
+
+    Inventory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        quantity: { type: number }
+        min_quantity: { type: number }
+        max_quantity: { type: number }
+
+    Order:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        store_id: { type: string, format: uuid }
+        driver_id: { type: string, format: uuid, nullable: true }
+        status:
+          type: string
+          enum: [pending, accepted, preparing, ready, picked_up, delivered, rejected, cancelled]
+        delivery_method: { type: string, enum: [delivery, pickup] }
+        payment_method: { type: string, enum: [cash, sinpe] }
+        payment_status:
+          type: string
+          enum: [not_required, pending, submitted, verified, rejected]
+        payment_reference: { type: string, nullable: true }
+        payment_proof_path: { type: string, nullable: true, description: "Ruta en bucket privado" }
+        address_label: { type: string, nullable: true }
+        address_detail: { type: string, nullable: true }
+        latitude: { type: number, nullable: true }
+        longitude: { type: number, nullable: true }
+        subtotal: { type: number }
+        delivery_fee: { type: number }
+        total: { type: number }
+        notes: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    OrderItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid, nullable: true }
+        product_name: { type: string, description: "Snapshot al momento del pedido" }
+        unit_price: { type: number, description: "Snapshot del precio" }
+        quantity: { type: integer }
+        notes: { type: string, nullable: true }
+
+    OrderStatusHistory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        status: { type: string }
+        changed_by: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    Address:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        label: { type: string, maxLength: 60 }
+        detail: { type: string, maxLength: 500, description: "Señas" }
+        district: { type: string, nullable: true, description: "Distrito de Tilarán" }
+        reference: { type: string, nullable: true, maxLength: 200 }
+        latitude: { type: number, nullable: true, description: "Pin exacto" }
+        longitude: { type: number, nullable: true }
+        is_default: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    AddressInput:
+      type: object
+      required: [user_id, label, detail]
+      properties:
+        user_id: { type: string, format: uuid }
+        label: { type: string, maxLength: 60 }
+        detail: { type: string, maxLength: 500 }
+        district: { type: string }
+        reference: { type: string, maxLength: 200 }
+        latitude: { type: number }
+        longitude: { type: number }
+        is_default: { type: boolean }
+
+    Review:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        store_id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    SupportTicket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        type: { type: string, enum: [order, store, app] }
+        message: { type: string, maxLength: 2000 }
+        status: { type: string, enum: [open, resolved] }
+        created_at: { type: string, format: date-time }

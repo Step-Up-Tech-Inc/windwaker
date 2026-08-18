@@ -8,17 +8,20 @@ class RemoteConfigService {
 
   static const String _enableFacebookLoginKey = 'enable_facebook_login';
 
-  late final FirebaseRemoteConfig _remoteConfig;
+  FirebaseRemoteConfig? _remoteConfig;
+  bool _isInitialized = false;
 
   final Map<String, dynamic> _defaults = <String, dynamic>{
     _enableFacebookLoginKey: false,
   };
 
   Future<void> initialize() async {
-    _remoteConfig = FirebaseRemoteConfig.instance;
+    if (_isInitialized) return;
 
     try {
-      await _remoteConfig.setConfigSettings(
+      _remoteConfig = FirebaseRemoteConfig.instance;
+
+      await _remoteConfig!.setConfigSettings(
         RemoteConfigSettings(
           fetchTimeout: const Duration(minutes: 1),
           minimumFetchInterval:
@@ -28,13 +31,35 @@ class RemoteConfigService {
         ),
       );
 
-      await _remoteConfig.setDefaults(_defaults);
-      await _remoteConfig.fetchAndActivate();
+      await _remoteConfig!.setDefaults(_defaults);
+      await _remoteConfig!.fetchAndActivate();
+
+      _isInitialized = true;
+      debugPrint('✅ Remote Config inicializado correctamente');
     } catch (e) {
-      debugPrint('Error al inicializar Remote Config: $e');
+      debugPrint('⚠️ Error al inicializar Remote Config: $e');
+      // En caso de error, usar valores por defecto
+      _isInitialized = false;
     }
   }
 
-  bool get enableFacebookLogin =>
-      _remoteConfig.getBool(_enableFacebookLoginKey);
+  bool get enableFacebookLogin {
+    if (!_isInitialized || _remoteConfig == null) {
+      debugPrint(
+        '⚠️ Remote Config no inicializado, usando valor por defecto: false',
+      );
+      return _defaults[_enableFacebookLoginKey] ?? false;
+    }
+
+    try {
+      return _remoteConfig!.getBool(_enableFacebookLoginKey);
+    } catch (e) {
+      debugPrint(
+        '⚠️ Error obteniendo enableFacebookLogin, usando valor por defecto: $e',
+      );
+      return _defaults[_enableFacebookLoginKey] ?? false;
+    }
+  }
+
+  bool get isInitialized => _isInitialized;
 }

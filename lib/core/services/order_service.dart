@@ -1,102 +1,86 @@
-import 'dart:math';
 import '../models/cart_item.dart';
 import '../models/order.dart';
 import '../repositories/order_repository.dart';
 
+/// Fachada de pedidos para la UI. Delega en [OrderRepository]; el servidor
+/// (RPCs de Supabase) es quien valida precios y transiciones de estado.
 class OrderService {
   final OrderRepository _orderRepository;
 
   OrderService(this._orderRepository);
 
-  // Crear un nuevo pedido
+  /// Crea el pedido y lo devuelve ya cargado desde la base de datos
+  /// (con totales calculados por el servidor).
   Future<Order> createOrder({
-    required String restaurantName,
+    required String storeId,
+    required DeliveryMethod deliveryMethod,
+    required OrderPaymentMethod paymentMethod,
     required List<CartItem> items,
-    required double subtotal,
-    required double tax,
-    required double deliveryCost,
-    required double discount,
-    required double total,
+    String? addressLabel,
+    String? addressDetail,
+    double? latitude,
+    double? longitude,
+    String? notes,
   }) async {
-    // Generar un ID único para el pedido
-    final orderId =
-        'ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
-
-    // Calcular tiempo estimado de entrega (entre 15 y 40 minutos)
-    final estimatedDeliveryTime = 15 + Random().nextInt(25);
-
-    // Calcular hora estimada de llegada
-    final now = DateTime.now();
-    final estimatedArrival = now.add(Duration(minutes: estimatedDeliveryTime));
-
-    // Crear el pedido
-    final order = Order(
-      id: orderId,
-      restaurantName: restaurantName,
+    final orderId = await _orderRepository.createOrder(
+      storeId: storeId,
+      deliveryMethod: deliveryMethod,
+      paymentMethod: paymentMethod,
       items: items,
-      subtotal: subtotal,
-      tax: tax,
-      deliveryCost: deliveryCost,
-      discount: discount,
-      total: total,
-      estimatedDeliveryTime: estimatedDeliveryTime,
-      createdAt: now,
-      estimatedArrival: estimatedArrival,
-      status: OrderStatus.confirmed,
+      addressLabel: addressLabel,
+      addressDetail: addressDetail,
+      latitude: latitude,
+      longitude: longitude,
+      notes: notes,
     );
 
-    // Guardar el pedido en el repositorio
-    await _orderRepository.saveActiveOrder(order);
-
-    // Simular cambio de estado después de un tiempo
-    _simulateOrderProgress(order);
-
+    final order = await _orderRepository.getOrderById(orderId);
+    if (order == null) {
+      throw StateError('El pedido $orderId no se pudo cargar tras crearse');
+    }
     return order;
   }
 
-  // Obtener el pedido activo
-  Future<Order?> getActiveOrder() {
-    return _orderRepository.getActiveOrder();
-  }
+  Future<Order?> getActiveOrder() =>
+      _orderRepository.getActiveOrderForCurrentUser();
 
-  // Actualizar el estado del pedido
-  Future<void> updateOrderStatus(OrderStatus status) {
-    return _orderRepository.updateOrderStatus(status);
-  }
+  Future<bool> hasActiveOrder() async => (await getActiveOrder()) != null;
 
-  // Verificar si hay un pedido activo
-  Future<bool> hasActiveOrder() {
-    return _orderRepository.hasActiveOrder();
-  }
+  Future<List<Order>> getOrderHistory({int limit = 20}) =>
+      _orderRepository.getMyOrders(limit: limit);
 
-  // Cancelar el pedido activo
-  Future<void> cancelOrder() {
-    return _orderRepository.clearActiveOrder();
-  }
+  Stream<Order?> watchOrder(String orderId) =>
+      _orderRepository.watchOrder(orderId);
 
-  // Marcar el pedido como entregado
-  Future<void> markOrderAsDelivered() {
-    return _orderRepository.updateOrderStatus(OrderStatus.delivered);
-  }
+  Future<List<OrderStatusChange>> getStatusHistory(String orderId) =>
+      _orderRepository.getStatusHistory(orderId);
 
-  // Simular el progreso del pedido
-  void _simulateOrderProgress(Order order) {
-    // Cambiar a "en preparación" después de 1-2 minutos
-    Future.delayed(Duration(minutes: 1), () {
-      _orderRepository.updateOrderStatus(OrderStatus.inProgress);
+  Future<void> cancelOrder(String orderId) =>
+      _orderRepository.cancelOrder(orderId);
 
-      // Cambiar a "en camino" después de 2-3 minutos más
-      Future.delayed(Duration(minutes: 2), () {
-        _orderRepository.updateOrderStatus(OrderStatus.onTheWay);
+  /// Sube el comprobante SINPE del cliente (queda pendiente de revisión).
+  Future<void> submitPaymentProof({
+    required String orderId,
+    required List<int> imageBytes,
+    required String fileName,
+    required String reference,
+  }) => _orderRepository.submitPaymentProof(
+    orderId: orderId,
+    imageBytes: imageBytes,
+    fileName: fileName,
+    reference: reference,
+  );
 
-        // Cambiar a "entregado" después del tiempo estimado
-        final remainingTime = order.estimatedDeliveryTime - 3;
-        if (remainingTime > 0) {
-          Future.delayed(Duration(minutes: remainingTime), () {
-            _orderRepository.updateOrderStatus(OrderStatus.delivered);
-          });
-        }
-      });
-    });
-  }
+  /// URL firmada temporal del comprobante (bucket privado).
+  Future<String> getPaymentProofUrl(String proofPath) =>
+      _orderRepository.getPaymentProofUrl(proofPath);
+
+  /// El negocio aprueba o rechaza el pago SINPE.
+  Future<void> reviewSinpePayment({
+    required String orderId,
+    required bool approved,
+  }) => _orderRepository.reviewSinpePayment(
+    orderId: orderId,
+    approved: approved,
+  );
 }

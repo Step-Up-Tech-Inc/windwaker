@@ -1,5 +1,8 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
+import 'package:windwaker/core/config/app_config.dart';
+import 'package:windwaker/core/models/profile.dart';
 
 class UserRepository {
   final SupabaseClient _supabaseClient;
@@ -13,280 +16,70 @@ class UserRepository {
     return _supabaseClient.auth.currentUser;
   }
 
-  /// Verifica la estructura de la tabla profiles
-  Future<Map<String, dynamic>> verifyProfilesTable() async {
-    try {
-      _logger.i('Verificando estructura de la tabla profiles...');
-
-      // Verificar si la tabla existe
-      try {
-        final result = await _supabaseClient
-            .from('profiles')
-            .select('id')
-            .limit(1);
-        _logger.i('La tabla profiles existe. Resultado de prueba: $result');
-      } catch (e) {
-        _logger.e('Error al consultar tabla profiles: $e');
-        return {'exists': false, 'error': e.toString()};
-      }
-
-      // Verificar los permisos de escritura
-      try {
-        final user = getCurrentUser();
-        if (user != null) {
-          _logger.i(
-            'Intentando verificar permisos de escritura para usuario: ${user.id}',
-          );
-
-          final testData = {
-            'id': user.id,
-            'email': user.email,
-            'phone': 'test_phone',
-            'updated_at': DateTime.now().toIso8601String(),
-          };
-
-          final response =
-              await _supabaseClient.from('profiles').upsert(testData).select();
-
-          _logger.i('Prueba de escritura exitosa: $response');
-          return {
-            'exists': true,
-            'writable': true,
-            'sample': response,
-            'user': user.id,
-          };
-        } else {
-          _logger.w(
-            'No hay usuario autenticado para probar permisos de escritura',
-          );
-          return {
-            'exists': true,
-            'writable': false,
-            'reason': 'No user authenticated',
-          };
-        }
-      } catch (e) {
-        _logger.e('Error al verificar permisos de escritura: $e');
-        return {'exists': true, 'writable': false, 'error': e.toString()};
-      }
-    } catch (e) {
-      _logger.e('Error general al verificar tabla profiles: $e');
-      return {'error': e.toString()};
-    }
-  }
-
   /// Crea o actualiza el perfil del usuario en la tabla 'profiles'
   Future<void> createOrUpdateUserProfile({
     required String userId,
     String? email,
     String? phone,
   }) async {
+    if (AppConfig.logDatabaseOperations) {
+      _logger.i(
+        '🔄 Creando/actualizando perfil para userId=$userId, email=$email, phone=$phone',
+      );
+    }
+
     try {
-      _logger.i('🔄 === INICIO createOrUpdateUserProfile ===');
-      _logger.i('   userId: "$userId"');
-      _logger.i('   email: "$email"');
-      _logger.i('   phone: "$phone"');
+      // Construir datos de actualización solo con campos no-nulos
+      final updateData = <String, dynamic>{};
+      if (email != null) updateData['email'] = email;
+      if (phone != null) updateData['phone'] = phone;
 
-      // Preparar datos para upsert
-      final now = DateTime.now().toIso8601String();
-      _logger.i('   timestamp: $now');
-
-      // Verificar si algún campo es null y obtener valores existentes si es necesario
-      Map<String, dynamic>? existingProfile;
-      try {
-        _logger.i('🔍 Obteniendo perfil existente...');
-        existingProfile = await getUserProfile(userId);
-        _logger.i('📋 Perfil existente encontrado: $existingProfile');
-      } catch (e) {
-        _logger.w('⚠️ No se pudo obtener el perfil existente: $e');
+      if (AppConfig.logDatabaseOperations) {
+        _logger.i('📝 updateData: $updateData');
+        _logger.i(
+          '🔐 Auth User ID actual: ${_supabaseClient.auth.currentUser?.id}',
+        );
       }
 
-      // Determinar valores finales a usar
-      String? finalEmail = email;
-      String? finalPhone = phone;
+      // 1. Intentar UPDATE primero (perfil ya existe)
+      final updated = await _supabaseClient
+          .from('profiles')
+          .update(updateData)
+          .eq('id', userId)
+          .select();
 
-      // Si el email es null pero hay uno existente, mantenerlo
-      if (email == null &&
-          existingProfile != null &&
-          existingProfile['email'] != null) {
-        finalEmail = existingProfile['email'] as String?;
-        _logger.i('📧 Usando email existente: "$finalEmail"');
+      if (AppConfig.logDatabaseOperations) {
+        _logger.i('📝 UPDATE resultado (${updated.length} filas): $updated');
       }
 
-      // Si el teléfono es null pero hay uno existente, mantenerlo
-      if (phone == null &&
-          existingProfile != null &&
-          existingProfile['phone'] != null) {
-        finalPhone = existingProfile['phone'] as String?;
-        _logger.i('📱 Usando teléfono existente: "$finalPhone"');
-      }
+      if (updated.isEmpty) {
+        // 2. No existía → INSERT con todos los datos
+        _logger.i('🆕 Perfil no existe, insertando...');
+        final inserted = await _supabaseClient
+            .from('profiles')
+            .insert({'id': userId, 'email': email, 'phone': phone})
+            .select();
 
-      _logger.i('🎯 Valores finales a guardar:');
-      _logger.i('   Email final: "$finalEmail"');
-      _logger.i('   Phone final: "$finalPhone"');
-
-      // Crear objeto con datos no nulos
-      final Map<String, dynamic> data = {'id': userId, 'updated_at': now};
-
-      // Agregar email y teléfono solo si no son nulos
-      if (finalEmail != null && finalEmail.isNotEmpty) {
-        data['email'] = finalEmail;
-        _logger.i('✅ Email agregado a data: "${data['email']}"');
-      } else {
-        _logger.w('⚠️ Email no agregado (null o vacío)');
-      }
-
-      if (finalPhone != null && finalPhone.isNotEmpty) {
-        data['phone'] = finalPhone;
-        _logger.i('✅ Phone agregado a data: "${data['phone']}"');
-      } else {
-        _logger.w('⚠️ Phone no agregado (null o vacío)');
-      }
-
-      _logger.i('📦 Datos completos para upsert: $data');
-
-      try {
-        _logger.i('🚀 Intentando upsert directo...');
-        // Intentar upsert directo
-        final response =
-            await _supabaseClient.from('profiles').upsert(data).select();
-
-        _logger.i('✅ Upsert exitoso. Respuesta completa: $response');
-
-        // Verificar que la respuesta contiene los datos esperados
-        if (response.isNotEmpty) {
-          final savedData = response.first;
-          _logger.i('📋 Datos guardados en respuesta:');
-          _logger.i('   ID: "${savedData['id']}"');
-          _logger.i('   Email: "${savedData['email']}"');
-          _logger.i('   Phone: "${savedData['phone']}"');
-          _logger.i('   Updated: "${savedData['updated_at']}"');
-
-          // Verificar específicamente el email
-          if (finalEmail != null && savedData['email'] != finalEmail) {
-            _logger.e('❌ PROBLEMA: Email no coincide en respuesta');
-            _logger.e('   Esperado: "$finalEmail"');
-            _logger.e('   Guardado: "${savedData['email']}"');
-          } else if (finalEmail != null) {
-            _logger.i(
-              '✅ Email verificado en respuesta: "${savedData['email']}"',
-            );
-          }
-        } else {
-          _logger.w('⚠️ Respuesta de upsert vacía');
-        }
-      } catch (upsertError) {
-        _logger.e('❌ Error en upsert: $upsertError');
-        _logger.e('   Tipo de error: ${upsertError.runtimeType}');
-
-        // Verificar si el registro existe
-        try {
-          _logger.i('🔍 Verificando si el registro existe...');
-          final exists =
-              await _supabaseClient
-                  .from('profiles')
-                  .select('id, email, phone')
-                  .eq('id', userId)
-                  .maybeSingle();
-
-          _logger.i('📋 Registro existente: $exists');
-
-          if (exists != null) {
-            // Si existe, actualizar
-            _logger.i('🔄 Perfil existe, actualizando...');
-            final updateData = {'updated_at': now};
-            if (finalEmail != null && finalEmail.isNotEmpty) {
-              updateData['email'] = finalEmail;
-              _logger.i('📧 Email agregado al update: "$finalEmail"');
-            }
-            if (finalPhone != null && finalPhone.isNotEmpty) {
-              updateData['phone'] = finalPhone;
-              _logger.i('📱 Phone agregado al update: "$finalPhone"');
-            }
-
-            _logger.i('📦 Datos para update: $updateData');
-
-            final updateResponse =
-                await _supabaseClient
-                    .from('profiles')
-                    .update(updateData)
-                    .eq('id', userId)
-                    .select();
-
-            _logger.i('✅ Actualización exitosa. Respuesta: $updateResponse');
-          } else {
-            // Si no existe, insertar
-            _logger.i('➕ Perfil no existe, insertando...');
-            final insertData = {
-              'id': userId,
-              'created_at': now,
-              'updated_at': now,
-            };
-            if (finalEmail != null && finalEmail.isNotEmpty) {
-              insertData['email'] = finalEmail;
-              _logger.i('📧 Email agregado al insert: "$finalEmail"');
-            }
-            if (finalPhone != null && finalPhone.isNotEmpty) {
-              insertData['phone'] = finalPhone;
-              _logger.i('📱 Phone agregado al insert: "$finalPhone"');
-            }
-
-            _logger.i('📦 Datos para insert: $insertData');
-
-            final insertResponse =
-                await _supabaseClient
-                    .from('profiles')
-                    .insert(insertData)
-                    .select();
-
-            _logger.i('✅ Inserción exitosa. Respuesta: $insertResponse');
-          }
-        } catch (e) {
-          _logger.e('❌ Error en operación alternativa: $e');
-          _logger.e('   Tipo de error: ${e.runtimeType}');
-          throw Exception('No se pudo crear/actualizar el perfil: $e');
-        }
-      }
-
-      // Verificar que el perfil se guardó correctamente
-      _logger.i('🔍 Verificación final del perfil guardado...');
-      final updatedProfile = await getUserProfile(userId);
-      _logger.i('📋 Perfil final verificado: $updatedProfile');
-
-      if (updatedProfile != null) {
-        _logger.i('✅ Verificación de campos guardados:');
-        _logger.i('   Email guardado: "${updatedProfile['email']}"');
-        _logger.i('   Phone guardado: "${updatedProfile['phone']}"');
-        _logger.i('   Updated at: "${updatedProfile['updated_at']}"');
-
-        // Verificación específica del email
-        if (finalEmail != null) {
-          final savedEmail = updatedProfile['email']?.toString();
-          if (savedEmail == finalEmail) {
-            _logger.i('✅ Email verificado correctamente');
-          } else {
-            _logger.e('❌ CRÍTICO: Email no se guardó correctamente');
-            _logger.e('   Esperado: "$finalEmail"');
-            _logger.e('   Guardado: "$savedEmail"');
-          }
+        if (AppConfig.logDatabaseOperations) {
+          _logger.i('✅ Perfil insertado: $inserted');
         }
       } else {
-        _logger.e('❌ CRÍTICO: No se pudo verificar el perfil guardado');
+        if (AppConfig.logDatabaseOperations) {
+          _logger.i('✅ Perfil actualizado con email=$email, phone=$phone');
+        }
       }
-
-      _logger.i('🎉 === FIN createOrUpdateUserProfile ===');
     } catch (e) {
-      _logger.e('❌ Error al crear/actualizar perfil de usuario: $e');
-      _logger.e('   Tipo de error: ${e.runtimeType}');
-      _logger.e('   Stack trace: ${StackTrace.current}');
-      throw Exception('Error al crear/actualizar perfil de usuario: $e');
+      _logger.e('⛔ Error al guardar perfil: $e');
+      rethrow;
     }
   }
 
   /// Obtiene el perfil completo del usuario desde la tabla 'profiles'
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    if (AppConfig.logDatabaseOperations) {
+      _logger.i('💡 Obteniendo perfil para usuario: $userId');
+    }
     try {
-      _logger.i('Obteniendo perfil para usuario: $userId');
       final response =
           await _supabaseClient
               .from('profiles')
@@ -294,11 +87,183 @@ class UserRepository {
               .eq('id', userId)
               .maybeSingle();
 
-      _logger.i('Perfil obtenido: $response');
+      if (AppConfig.logDatabaseOperations) {
+        if (response != null) {
+          _logger.i('💡 Perfil obtenido: $response');
+        } else {
+          _logger.i('💡 No se encontró perfil para el usuario: $userId');
+        }
+      }
       return response;
-    } catch (e) {
-      _logger.e('Error al obtener perfil de usuario: $e');
+    } catch (error) {
+      _logger.e('Error al obtener el perfil del usuario: $error');
       return null;
+    }
+  }
+
+  /// Actualiza nombre y/o avatar del perfil.
+  Future<void> updateProfileDetails({
+    required String userId,
+    String? fullName,
+    String? avatarUrl,
+  }) async {
+    final data = <String, dynamic>{
+      if (fullName != null) 'full_name': fullName,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+    };
+    if (data.isEmpty) return;
+    await _supabaseClient.from('profiles').update(data).eq('id', userId);
+
+    // Reflejar el nombre en el display name de Supabase Auth (dashboard)
+    if (fullName != null && fullName.isNotEmpty) {
+      try {
+        await _supabaseClient.auth.updateUser(
+          UserAttributes(data: {'display_name': fullName}),
+        );
+      } catch (e) {
+        _logger.w('No se pudo actualizar display_name en Auth: $e');
+      }
+    }
+  }
+
+  /// Sube la foto de perfil al bucket `store-images` (carpeta avatars)
+  /// y devuelve su URL pública.
+  Future<String> uploadAvatar({
+    required String userId,
+    required String fileName,
+    required Uint8List bytes,
+  }) async {
+    final path =
+        'avatars/$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    await _supabaseClient.storage
+        .from('store-images')
+        .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
+    return _supabaseClient.storage.from('store-images').getPublicUrl(path);
+  }
+
+  /// Obtiene el perfil tipado del usuario (o null si no existe)
+  Future<Profile?> getProfile(String userId) async {
+    final data = await getUserProfile(userId);
+    if (data == null) return null;
+    try {
+      return Profile.fromJson(data);
+    } catch (e) {
+      _logger.e('Error deserializando perfil de $userId: $e');
+      return null;
+    }
+  }
+
+  /// Busca un usuario por número de teléfono en la tabla 'profiles'
+  Future<Map<String, dynamic>?> findUserByPhone(String phoneNumber) async {
+    if (AppConfig.logDatabaseOperations) {
+      _logger.i('🔍 Buscando usuario por teléfono: $phoneNumber');
+    }
+
+    try {
+      final response =
+          await _supabaseClient
+              .from('profiles')
+              .select()
+              .eq('phone', phoneNumber)
+              .maybeSingle();
+
+      if (AppConfig.logDatabaseOperations) {
+        if (response != null) {
+          _logger.i('✅ Usuario encontrado por teléfono: ${response['id']}');
+        } else {
+          _logger.i('❌ No se encontró usuario con teléfono: $phoneNumber');
+        }
+      }
+
+      return response;
+    } catch (error) {
+      _logger.e('Error al buscar usuario por teléfono: $error');
+      return null;
+    }
+  }
+
+  /// Busca un usuario por email en la tabla 'profiles'
+  Future<Map<String, dynamic>?> findUserByEmail(String email) async {
+    if (AppConfig.logDatabaseOperations) {
+      _logger.i('🔍 Buscando usuario por email: $email');
+    }
+
+    try {
+      final response =
+          await _supabaseClient
+              .from('profiles')
+              .select()
+              .eq('email', email)
+              .maybeSingle();
+
+      if (AppConfig.logDatabaseOperations) {
+        if (response != null) {
+          _logger.i('✅ Usuario encontrado por email: ${response['id']}');
+        } else {
+          _logger.i('❌ No se encontró usuario con email: $email');
+        }
+      }
+
+      return response;
+    } catch (error) {
+      _logger.e('Error al buscar usuario por email: $error');
+      return null;
+    }
+  }
+
+  /// Verifica si ya existe una cuenta con [identifier] (teléfono o email).
+  /// Llama a la Edge Function `check-account`, que usa la service_role key
+  /// EN EL SERVIDOR (nunca en la app) y solo devuelve un booleano.
+  Future<bool> checkUserExistsAdmin(
+    String identifier, {
+    bool isEmail = false,
+  }) async {
+    try {
+      final response = await _supabaseClient.functions.invoke(
+        'check-account',
+        body: {'identifier': identifier, 'isEmail': isEmail},
+      );
+      final data = response.data;
+      if (data is Map && data['exists'] is bool) {
+        return data['exists'] as bool;
+      }
+      // Ante respuesta inesperada, es más seguro asumir que existe
+      // (bloquea registros duplicados; el login mostrará credenciales inválidas)
+      _logger.w('Respuesta inesperada de check-account: $data');
+      return true;
+    } catch (e) {
+      _logger.e('❌ Error verificando la cuenta vía edge function: $e');
+      // Fail-closed: no permitir avanzar si no se pudo verificar
+      throw Exception('No se pudo verificar la cuenta. Revisa tu conexión.');
+    }
+  }
+
+  /// Asigna el email al usuario autenticado vía Edge Function `set-user-email`
+  /// (la service_role key vive en el servidor, no en la app). El usuario se
+  /// identifica por su JWT dentro de la función.
+  Future<void> updateAuthEmail({
+    required String userId,
+    required String email,
+  }) async {
+    try {
+      await _supabaseClient.functions.invoke(
+        'set-user-email',
+        body: {'email': email},
+      );
+      _logger.i('✅ Email actualizado en Auth vía edge function');
+    } on FunctionException catch (e) {
+      // invoke() lanza en respuestas no-2xx; extraer el mensaje del servidor
+      // (p. ej. el 409 "Ya existe una cuenta con este correo.").
+      final details = e.details;
+      final message =
+          (details is Map && details['error'] is String)
+              ? details['error'] as String
+              : 'No se pudo actualizar el correo.';
+      _logger.e('❌ set-user-email falló: $message');
+      throw Exception(message);
+    } catch (e) {
+      _logger.e('❌ Error actualizando email vía edge function: $e');
+      rethrow;
     }
   }
 }

@@ -12,6 +12,8 @@ class OrderTrackingState with _$OrderTrackingState {
     required String deliveryPerson,
     required List<OrderProductSummary> products,
     required int subtotal,
+    /// Pedido completo (para la sección de pago SINPE, total, etc.)
+    Order? order,
   }) = _Loaded;
   const factory OrderTrackingState.error(String message) = _Error;
   const factory OrderTrackingState.noOrder() = _NoOrder;

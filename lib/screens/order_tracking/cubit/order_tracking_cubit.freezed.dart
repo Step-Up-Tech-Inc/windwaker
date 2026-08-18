@@ -29,6 +29,7 @@ mixin _$OrderTrackingState {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -49,6 +50,7 @@ mixin _$OrderTrackingState {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -68,6 +70,7 @@ mixin _$OrderTrackingState {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,
@@ -184,6 +187,7 @@ class _$InitialImpl implements _Initial {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -208,6 +212,7 @@ class _$InitialImpl implements _Initial {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -231,6 +236,7 @@ class _$InitialImpl implements _Initial {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,
@@ -349,6 +355,7 @@ class _$LoadingImpl implements _Loading {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -373,6 +380,7 @@ class _$LoadingImpl implements _Loading {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -396,6 +404,7 @@ class _$LoadingImpl implements _Loading {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,
@@ -476,7 +485,10 @@ abstract class _$$LoadedImplCopyWith<$Res> {
     String deliveryPerson,
     List<OrderProductSummary> products,
     int subtotal,
+    Order? order,
   });
+
+  $OrderCopyWith<$Res>? get order;
 }
 
 /// @nodoc
@@ -500,6 +512,7 @@ class __$$LoadedImplCopyWithImpl<$Res>
     Object? deliveryPerson = null,
     Object? products = null,
     Object? subtotal = null,
+    Object? order = freezed,
   }) {
     return _then(
       _$LoadedImpl(
@@ -538,8 +551,27 @@ class __$$LoadedImplCopyWithImpl<$Res>
                 ? _value.subtotal
                 : subtotal // ignore: cast_nullable_to_non_nullable
                     as int,
+        order:
+            freezed == order
+                ? _value.order
+                : order // ignore: cast_nullable_to_non_nullable
+                    as Order?,
       ),
     );
+  }
+
+  /// Create a copy of OrderTrackingState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $OrderCopyWith<$Res>? get order {
+    if (_value.order == null) {
+      return null;
+    }
+
+    return $OrderCopyWith<$Res>(_value.order!, (value) {
+      return _then(_value.copyWith(order: value));
+    });
   }
 }
 
@@ -554,6 +586,7 @@ class _$LoadedImpl implements _Loaded {
     required this.deliveryPerson,
     required final List<OrderProductSummary> products,
     required this.subtotal,
+    this.order,
   }) : _timeline = timeline,
        _products = products;
 
@@ -584,9 +617,13 @@ class _$LoadedImpl implements _Loaded {
   @override
   final int subtotal;
 
+  /// Pedido completo (para la sección de pago SINPE, total, etc.)
+  @override
+  final Order? order;
+
   @override
   String toString() {
-    return 'OrderTrackingState.loaded(orderId: $orderId, timeline: $timeline, address: $address, estimatedTime: $estimatedTime, deliveryPerson: $deliveryPerson, products: $products, subtotal: $subtotal)';
+    return 'OrderTrackingState.loaded(orderId: $orderId, timeline: $timeline, address: $address, estimatedTime: $estimatedTime, deliveryPerson: $deliveryPerson, products: $products, subtotal: $subtotal, order: $order)';
   }
 
   @override
@@ -603,7 +640,8 @@ class _$LoadedImpl implements _Loaded {
                 other.deliveryPerson == deliveryPerson) &&
             const DeepCollectionEquality().equals(other._products, _products) &&
             (identical(other.subtotal, subtotal) ||
-                other.subtotal == subtotal));
+                other.subtotal == subtotal) &&
+            (identical(other.order, order) || other.order == order));
   }
 
   @override
@@ -616,6 +654,7 @@ class _$LoadedImpl implements _Loaded {
     deliveryPerson,
     const DeepCollectionEquality().hash(_products),
     subtotal,
+    order,
   );
 
   /// Create a copy of OrderTrackingState
@@ -639,6 +678,7 @@ class _$LoadedImpl implements _Loaded {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -655,6 +695,7 @@ class _$LoadedImpl implements _Loaded {
       deliveryPerson,
       products,
       subtotal,
+      order,
     );
   }
 
@@ -671,6 +712,7 @@ class _$LoadedImpl implements _Loaded {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -686,6 +728,7 @@ class _$LoadedImpl implements _Loaded {
       deliveryPerson,
       products,
       subtotal,
+      order,
     );
   }
 
@@ -702,6 +745,7 @@ class _$LoadedImpl implements _Loaded {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,
@@ -719,6 +763,7 @@ class _$LoadedImpl implements _Loaded {
         deliveryPerson,
         products,
         subtotal,
+        order,
       );
     }
     return orElse();
@@ -780,6 +825,7 @@ abstract class _Loaded implements OrderTrackingState {
     required final String deliveryPerson,
     required final List<OrderProductSummary> products,
     required final int subtotal,
+    final Order? order,
   }) = _$LoadedImpl;
 
   String get orderId;
@@ -789,6 +835,9 @@ abstract class _Loaded implements OrderTrackingState {
   String get deliveryPerson;
   List<OrderProductSummary> get products;
   int get subtotal;
+
+  /// Pedido completo (para la sección de pago SINPE, total, etc.)
+  Order? get order;
 
   /// Create a copy of OrderTrackingState
   /// with the given fields replaced by the non-null parameter values.
@@ -877,6 +926,7 @@ class _$ErrorImpl implements _Error {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -901,6 +951,7 @@ class _$ErrorImpl implements _Error {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -924,6 +975,7 @@ class _$ErrorImpl implements _Error {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,
@@ -1050,6 +1102,7 @@ class _$NoOrderImpl implements _NoOrder {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -1074,6 +1127,7 @@ class _$NoOrderImpl implements _NoOrder {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -1097,6 +1151,7 @@ class _$NoOrderImpl implements _NoOrder {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,
@@ -1254,6 +1309,7 @@ class _$OrderCancelledImpl implements _OrderCancelled {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -1278,6 +1334,7 @@ class _$OrderCancelledImpl implements _OrderCancelled {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -1301,6 +1358,7 @@ class _$OrderCancelledImpl implements _OrderCancelled {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,
@@ -1474,6 +1532,7 @@ class _$OrderDeliveredImpl implements _OrderDelivered {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )
     loaded,
     required TResult Function(String message) error,
@@ -1498,6 +1557,7 @@ class _$OrderDeliveredImpl implements _OrderDelivered {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult? Function(String message)? error,
@@ -1521,6 +1581,7 @@ class _$OrderDeliveredImpl implements _OrderDelivered {
       String deliveryPerson,
       List<OrderProductSummary> products,
       int subtotal,
+      Order? order,
     )?
     loaded,
     TResult Function(String message)? error,

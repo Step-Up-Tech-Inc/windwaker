@@ -46,7 +46,7 @@ class OrderStatusBanner extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'Pedido en camino',
+                      'Pedido activo',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -55,7 +55,7 @@ class OrderStatusBanner extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${order.restaurantName} • Llega en ${order.estimatedDeliveryTime} min',
+                      '${order.storeName ?? 'Tu pedido'} • ${order.status.label}',
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
                     const SizedBox(height: 8),
@@ -89,29 +89,21 @@ class OrderStatusBanner extends StatelessWidget {
   // Calcular el progreso basado en el estado del pedido
   double _calculateProgress() {
     switch (order.status) {
-      case OrderStatus.confirmed:
-        return 0.25;
-      case OrderStatus.inProgress:
+      case OrderStatus.pending:
+        return 0.1;
+      case OrderStatus.accepted:
+        return 0.3;
+      case OrderStatus.preparing:
         return 0.5;
-      case OrderStatus.onTheWay:
-        // Cálculo más preciso basado en el tiempo transcurrido
-        if (order.estimatedArrival != null) {
-          final now = DateTime.now();
-          final created = order.createdAt;
-          final arrival = order.estimatedArrival!;
-
-          // Tiempo total estimado en milisegundos
-          final totalTime = arrival.difference(created).inMilliseconds;
-          // Tiempo transcurrido en milisegundos
-          final elapsedTime = now.difference(created).inMilliseconds;
-
-          // Calcular progreso, pero asegurar que esté entre 0.5 y 0.95
-          final rawProgress = 0.5 + (0.45 * (elapsedTime / totalTime));
-          return rawProgress.clamp(0.5, 0.95);
-        }
-        return 0.75;
+      case OrderStatus.ready:
+        return 0.7;
+      case OrderStatus.pickedUp:
+        return 0.9;
       case OrderStatus.delivered:
         return 1.0;
+      case OrderStatus.rejected:
+      case OrderStatus.cancelled:
+        return 0.0;
     }
   }
 }
