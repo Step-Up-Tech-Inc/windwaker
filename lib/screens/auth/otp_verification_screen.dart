@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:windwaker/core/services/auth_service.dart';
+import 'package:windwaker/core/config/di_config.dart';
+import 'package:windwaker/core/config/app_config.dart';
 
+/// Paso 2 del registro: verificar el número de teléfono con el código SMS.
+/// Al verificarse, el usuario queda autenticado y pasa a completar su perfil
+/// (email + contraseña).
 class OTPVerificationScreen extends StatefulWidget {
   final String phone;
+
   const OTPVerificationScreen({super.key, required this.phone});
 
   @override
@@ -17,10 +23,14 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   bool _isLoading = false;
   bool _success = false;
   final _logger = Logger();
+  late final AuthService _authService;
 
   @override
   void initState() {
     super.initState();
+    _authService = getIt<AuthService>();
+    _logger.i('🚀 === OTP VERIFICATION SCREEN INICIADA ===');
+    _logger.i('🚀 Teléfono: ${widget.phone} | Modo app: ${AppConfig.currentMode}');
   }
 
   @override
@@ -30,137 +40,59 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   }
 
   Future<void> _submit() async {
+    final otp = _otpController.text.trim();
+    _logger.i('🔐 Verificando OTP para ${widget.phone}');
+
     setState(() {
       _errorMessage = null;
       _isLoading = true;
       _success = false;
     });
+
     try {
-      final otp = _otpController.text.trim();
+      // El AuthService resuelve el código según el modo:
+      // bypass=000000, testing=123456, production=SMS real.
+      final authResult = await _authService.authenticateWithSmsCode(
+        phoneNumber: widget.phone,
+        smsCode: otp,
+      );
 
-      // Código bypass para desarrollo - navegar directamente sin autenticación
-      if (otp == '000000') {
-        _logger.i(
-          'Usando código bypass 000000 para pruebas - navegando directamente',
-        );
+      if (!mounted) return;
+
+      if (!authResult.success) {
         setState(() {
-          _success = true;
+          _errorMessage = authResult.error ?? 'Código inválido. Inténtalo de nuevo.';
         });
-
-        // En modo bypass, navegamos directamente a completar perfil
-        // pasando los parámetros necesarios
-        _logger.i('Bypass: navegando directamente a completar perfil');
-        if (!mounted) return;
-        context.go(
-          '/complete-profile?phone=${Uri.encodeComponent(widget.phone)}&otp=$otp&bypass=true',
-        );
         return;
       }
 
-      _logger.i('Verificando OTP: $otp para teléfono: ${widget.phone}');
-      final AuthResponse response = await Supabase.instance.client.auth
-          .verifyOTP(type: OtpType.sms, phone: widget.phone, token: otp);
+      setState(() => _success = true);
+      _logger.i('✅ Teléfono verificado - UserID: ${authResult.userId}');
 
-      _logger.i('=== RESPUESTA VERIFY OTP ===');
-      _logger.i('Session no nula: ${response.session != null}');
-      _logger.i('User no nulo: ${response.user != null}');
-      if (response.session != null) {
-        _logger.i(
-          'Access Token: ${response.session!.accessToken.substring(0, 20)}...',
-        );
-        _logger.i(
-          'Refresh Token no nulo: ${response.session!.refreshToken != null}',
-        );
-        _logger.i('User ID: ${response.session!.user.id}');
-        _logger.i('User Phone: ${response.session!.user.phone}');
-        _logger.i('User Email: ${response.session!.user.email}');
-      }
+      // Si el perfil ya estaba completo (cuenta a medio crear que se retomó),
+      // no pedir email/contraseña de nuevo.
+      final isProfileComplete = await _authService.isProfileCompleteAsync();
+      if (!mounted) return;
 
-      _logger.i('=== USUARIO ACTUAL ANTES DEL DELAY ===');
-      final userBeforeDelay = Supabase.instance.client.auth.currentUser;
-      _logger.i('Current User no nulo: ${userBeforeDelay != null}');
-      if (userBeforeDelay != null) {
-        _logger.i('Current User ID: ${userBeforeDelay.id}');
-        _logger.i('Current User Phone: ${userBeforeDelay.phone}');
-        _logger.i('Current User Email: ${userBeforeDelay.email}');
-      }
-
-      if (response.session != null) {
-        setState(() {
-          _success = true;
-        });
-
-        // Intentar refrescar la sesión para asegurar que esté correctamente establecida
-        try {
-          _logger.i('Intentando refrescar la sesión...');
-          final refreshResponse =
-              await Supabase.instance.client.auth.refreshSession();
-          _logger.i(
-            'Sesión refrescada exitosamente: ${refreshResponse.session != null}',
-          );
-        } catch (e) {
-          _logger.w('Error al refrescar la sesión: $e');
-        }
-
-        // Delay para asegurar que la sesión se establezca completamente
-        await Future.delayed(const Duration(milliseconds: 1000));
-
-        _logger.i('=== USUARIO ACTUAL DESPUÉS DEL DELAY ===');
-        final currentUser = Supabase.instance.client.auth.currentUser;
-        _logger.i('Current User no nulo: ${currentUser != null}');
-        if (currentUser != null) {
-          _logger.i('Current User ID: ${currentUser.id}');
-          _logger.i('Current User Phone: ${currentUser.phone}');
-          _logger.i('Current User Email: ${currentUser.email}');
-          _logger.i('Current User JSON: ${currentUser.toJson()}');
-        }
-
-        if (currentUser == null) {
-          _logger.e(
-            'CRÍTICO: Usuario no autenticado después de verifyOTP, refresh y delay',
-          );
-          setState(() {
-            _errorMessage = 'Error en la autenticación. Intenta nuevamente.';
-          });
-          return;
-        }
-
-        final user = response.user;
-        String? email = user?.email;
-        if (email == null || email.isEmpty) {
-          _logger.i('Usuario sin email, navegando a completar perfil');
-          if (!mounted) return;
-          context.go(
-            '/complete-profile?phone=${Uri.encodeComponent(widget.phone)}&otp=$otp',
-          );
-          return;
-        } else {
-          _logger.i('Usuario con email, navegando a permisos de ubicación');
-          if (!mounted) return;
-          context.go('/location-permission');
-          return;
-        }
+      if (isProfileComplete) {
+        _logger.i('✅ Perfil ya completo - Navegando a Home');
+        context.go('/home');
       } else {
-        _logger.w('Código OTP incorrecto o expirado');
-        setState(() {
-          _errorMessage = 'Código incorrecto o expirado.';
-        });
+        _logger.i('🆕 Navegando a completar perfil (email + contraseña)');
+        context.go(
+          '/complete-profile?phone=${Uri.encodeComponent(widget.phone)}',
+        );
       }
-    } on AuthException catch (err) {
-      _logger.e('Error de autenticación: ${err.message}');
-      setState(() {
-        _errorMessage = err.message;
-      });
     } catch (e) {
-      _logger.e('Error inesperado: $e');
-      setState(() {
-        _errorMessage = 'Ocurrió un error inesperado.';
-      });
-    } finally {
+      _logger.e('❌ Error inesperado en verificación OTP: $e');
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _errorMessage = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
         });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -168,6 +100,15 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/register'),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -181,7 +122,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   const Icon(Icons.sms, size: 64, color: Color(0xFF2979FF)),
                   const SizedBox(height: 24),
                   const Text(
-                    'Verificar código',
+                    'Verificar teléfono',
                     style: TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,
@@ -191,11 +132,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Ingresa el código que recibiste por SMS',
+                    'Ingresa el código de 6 dígitos enviado a ${widget.phone}',
                     style: const TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.w500,
-                      fontSize: 18,
+                      fontSize: 16,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -203,9 +144,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   TextField(
                     controller: _otpController,
                     keyboardType: TextInputType.number,
+                    maxLength: 6,
                     decoration: const InputDecoration(
                       labelText: 'Código de verificación',
                       border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline),
+                      counterText: '',
                     ),
                   ),
                   if (_errorMessage != null)
@@ -223,13 +167,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       ),
                     ),
                   if (_success)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: SelectableText.rich(
-                        const TextSpan(
-                          text: '¡Teléfono verificado con éxito!',
-                          style: TextStyle(color: Colors.green, fontSize: 15),
-                        ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        '¡Teléfono verificado con éxito!',
+                        style: TextStyle(color: Colors.green, fontSize: 15),
                         textAlign: TextAlign.center,
                       ),
                     ),

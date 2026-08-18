@@ -1,66 +1,42 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Implementación de almacenamiento local seguro para Supabase
+/// Almacenamiento seguro de la sesión de Supabase (Keychain/Keystore).
+///
+/// En supabase_flutter 2.x, `persistSession` recibe la sesión COMPLETA como
+/// string JSON y `accessToken()` debe devolver ese mismo string intacto
+/// (el nombre es engañoso). Guardarlo troceado corrompe la sesión y obliga
+/// a iniciar sesión en cada arranque.
 class SecureLocalStorage implements LocalStorage {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
   final _logger = Logger();
 
-  // Clave para almacenar el token de acceso
-  static const String _accessTokenKey = 'supabase_access_token';
+  static const String _sessionKey = 'supabase_session';
 
-  // Clave para almacenar el token de refresco
-  static const String _refreshTokenKey = 'supabase_refresh_token';
+  // Claves del formato antiguo (corrupto) que hay que limpiar
+  static const String _legacyAccessKey = 'supabase_access_token';
+  static const String _legacyRefreshKey = 'supabase_refresh_token';
 
-  // Métodos personalizados para almacenamiento general
-  Future<String?> getStorageItem({required String key}) async {
+  @override
+  Future<void> initialize() async {
+    // Limpiar restos del formato antiguo si existen
     try {
-      final value = await _secureStorage.read(key: key);
-      _logger.d('SecureLocalStorage: Obtenido valor para clave: $key');
-      return value;
-    } catch (e) {
-      _logger.e(
-        'SecureLocalStorage: Error al obtener valor para clave: $key - $e',
-      );
-      return null;
+      await _secureStorage.delete(key: _legacyAccessKey);
+      await _secureStorage.delete(key: _legacyRefreshKey);
+    } catch (_) {
+      // Best-effort: no bloquear el arranque por esto
     }
   }
-
-  Future<void> setStorageItem({
-    required String key,
-    required String value,
-  }) async {
-    try {
-      await _secureStorage.write(key: key, value: value);
-      _logger.d('SecureLocalStorage: Valor guardado para clave: $key');
-    } catch (e) {
-      _logger.e(
-        'SecureLocalStorage: Error al guardar valor para clave: $key - $e',
-      );
-    }
-  }
-
-  Future<void> removeStorageItem({required String key}) async {
-    try {
-      await _secureStorage.delete(key: key);
-      _logger.d('SecureLocalStorage: Valor eliminado para clave: $key');
-    } catch (e) {
-      _logger.e(
-        'SecureLocalStorage: Error al eliminar valor para clave: $key - $e',
-      );
-    }
-  }
-
-  // Implementación de los métodos requeridos por la interfaz LocalStorage
 
   @override
   Future<String?> accessToken() async {
     try {
-      _logger.d('SecureLocalStorage: Obteniendo token de acceso');
-      return await _secureStorage.read(key: _accessTokenKey);
+      return await _secureStorage.read(key: _sessionKey);
     } catch (e) {
-      _logger.e('SecureLocalStorage: Error al obtener token de acceso - $e');
+      _logger.e('SecureLocalStorage: error leyendo la sesión - $e');
       return null;
     }
   }
@@ -68,65 +44,28 @@ class SecureLocalStorage implements LocalStorage {
   @override
   Future<bool> hasAccessToken() async {
     try {
-      _logger.d('SecureLocalStorage: Verificando si existe token de acceso');
-      return await _secureStorage.containsKey(key: _accessTokenKey);
+      return await _secureStorage.containsKey(key: _sessionKey);
     } catch (e) {
-      _logger.e('SecureLocalStorage: Error al verificar token de acceso - $e');
+      _logger.e('SecureLocalStorage: error verificando la sesión - $e');
       return false;
     }
-  }
-
-  @override
-  Future<void> initialize() async {
-    _logger.i('SecureLocalStorage: Inicializando almacenamiento seguro');
-    // No se requiere inicialización especial para FlutterSecureStorage
   }
 
   @override
   Future<void> persistSession(String persistSessionString) async {
     try {
-      // Extraer tokens de la cadena de sesión
-      final sessionData = persistSessionString.split('.');
-      if (sessionData.length >= 2) {
-        final accessToken = sessionData[0];
-        final refreshToken = sessionData[1];
-
-        // Guardar tokens por separado
-        await _secureStorage.write(key: _accessTokenKey, value: accessToken);
-        await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
-
-        _logger.i('SecureLocalStorage: Sesión persistida con éxito');
-      } else {
-        _logger.e('SecureLocalStorage: Formato de sesión inválido');
-      }
+      await _secureStorage.write(key: _sessionKey, value: persistSessionString);
     } catch (e) {
-      _logger.e('SecureLocalStorage: Error al persistir sesión - $e');
+      _logger.e('SecureLocalStorage: error persistiendo la sesión - $e');
     }
   }
 
   @override
-  Future<bool> removePersistedSession() async {
+  Future<void> removePersistedSession() async {
     try {
-      await _secureStorage.delete(key: _accessTokenKey);
-      await _secureStorage.delete(key: _refreshTokenKey);
-      _logger.i('SecureLocalStorage: Sesión eliminada con éxito');
-      return true;
+      await _secureStorage.delete(key: _sessionKey);
     } catch (e) {
-      _logger.e('SecureLocalStorage: Error al eliminar sesión - $e');
-      return false;
+      _logger.e('SecureLocalStorage: error eliminando la sesión - $e');
     }
-  }
-
-  // Métodos adicionales para compatibilidad
-  Future<String?> getItem({required String key}) async {
-    return getStorageItem(key: key);
-  }
-
-  Future<void> removeItem({required String key}) async {
-    return removeStorageItem(key: key);
-  }
-
-  Future<void> setItem({required String key, required String value}) async {
-    return setStorageItem(key: key, value: value);
   }
 }

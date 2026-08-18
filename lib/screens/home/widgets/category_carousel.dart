@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class CategoryCarousel extends StatelessWidget {
   const CategoryCarousel({super.key});
@@ -11,53 +12,63 @@ class CategoryCarousel extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: const [
+          // `query` se busca con ILIKE en nombre/descr./categoría de la tienda,
+          // por eso va en singular (matchea 'Restaurante' y 'Restaurantes').
           CategoryItem(
             icon: Icons.restaurant,
             color: Color(0xFFFCE4EC),
             iconColor: Color(0xFFE91E63),
             title: 'Restaurantes',
+            query: 'Restaurante',
           ),
           CategoryItem(
             icon: Icons.storefront,
             color: Color(0xFFE0F2F1),
             iconColor: Color(0xFF009688),
             title: 'Supermercados',
+            query: 'Supermercado',
           ),
           CategoryItem(
             icon: Icons.shopping_basket,
             color: Color(0xFFE3F2FD),
             iconColor: Color(0xFF2196F3),
             title: 'Tiendas',
+            query: 'Tienda',
           ),
           CategoryItem(
             icon: Icons.local_pharmacy,
             color: Color(0xFFF3E5F5),
             iconColor: Color(0xFF9C27B0),
             title: 'Farmacias',
+            query: 'Farmacia',
           ),
           CategoryItem(
             icon: Icons.local_florist,
             color: Color(0xFFE8F5E9),
             iconColor: Color(0xFF4CAF50),
             title: 'Floristerías',
+            query: 'Floristería',
           ),
           CategoryItem(
             icon: Icons.liquor,
             color: Color(0xFFFFF3E0),
             iconColor: Color(0xFFFF9800),
             title: 'Licores',
+            query: 'Licor',
           ),
           CategoryItem(
             icon: Icons.pets,
             color: Color(0xFFEFEBE9),
             iconColor: Color(0xFF795548),
             title: 'Mascotas',
+            query: 'Mascota',
           ),
           CategoryItem(
             icon: Icons.more_horiz,
             color: Color(0xFFE8EAF6),
             iconColor: Color(0xFF3F51B5),
             title: 'Más',
+            query: null, // Abre la búsqueda sin filtro
           ),
         ],
       ),
@@ -70,6 +81,7 @@ class CategoryItem extends StatelessWidget {
   final Color color;
   final Color iconColor;
   final String title;
+  final String? query;
 
   const CategoryItem({
     super.key,
@@ -77,27 +89,37 @@ class CategoryItem extends StatelessWidget {
     required this.color,
     required this.iconColor,
     required this.title,
+    this.query,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, size: 30, color: iconColor),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          ),
-        ],
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          final destination = query == null
+              ? '/search'
+              : '/search?q=${Uri.encodeComponent(query!)}';
+          context.go(destination);
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, size: 30, color: iconColor),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -604,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (dialogContext) => AlertDialog(
             title: Row(
               children: [
                 Icon(Icons.shopping_cart, color: theme.primaryColor),
@@ -685,7 +685,7 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   // Actualizar el carrito al cerrar el diálogo
                   if (mounted) {
                     context.read<HomeCubit>().loadCartItems();
@@ -695,12 +695,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  // Cerrar el diálogo con SU contexto y navegar con el de la
+                  // pantalla (el del diálogo queda desactivado tras el pop)
+                  Navigator.pop(dialogContext);
 
-                  if (cartItems.isNotEmpty) {
+                  if (cartItems.isNotEmpty && mounted) {
                     final storeId = cartItems.first.storeId;
-                    final storeName =
-                        'Tienda'; // Aquí deberías obtener el nombre real
+                    const storeName = 'Tienda';
 
                     _navigateToCart(context, storeId, storeName);
                   }

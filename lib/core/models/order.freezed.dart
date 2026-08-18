@@ -22,17 +22,47 @@ Order _$OrderFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$Order {
   String get id => throw _privateConstructorUsedError;
-  String get restaurantName => throw _privateConstructorUsedError;
-  List<CartItem> get items => throw _privateConstructorUsedError;
+  @JsonKey(name: 'customer_id')
+  String get customerId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'store_id')
+  String get storeId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'driver_id')
+  String? get driverId => throw _privateConstructorUsedError;
   OrderStatus get status => throw _privateConstructorUsedError;
+  @JsonKey(name: 'delivery_method')
+  DeliveryMethod get deliveryMethod => throw _privateConstructorUsedError;
+  @JsonKey(name: 'payment_method')
+  OrderPaymentMethod get paymentMethod => throw _privateConstructorUsedError;
+  @JsonKey(name: 'address_label')
+  String? get addressLabel => throw _privateConstructorUsedError;
+  @JsonKey(name: 'address_detail')
+  String? get addressDetail => throw _privateConstructorUsedError;
+  double? get latitude => throw _privateConstructorUsedError;
+  double? get longitude => throw _privateConstructorUsedError;
   double get subtotal => throw _privateConstructorUsedError;
-  double get tax => throw _privateConstructorUsedError;
-  double get deliveryCost => throw _privateConstructorUsedError;
-  double get discount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'delivery_fee')
+  double get deliveryFee => throw _privateConstructorUsedError;
   double get total => throw _privateConstructorUsedError;
-  int get estimatedDeliveryTime => throw _privateConstructorUsedError;
+  String? get notes => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime get createdAt => throw _privateConstructorUsedError;
-  DateTime? get estimatedArrival => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'payment_status')
+  PaymentStatus get paymentStatus => throw _privateConstructorUsedError;
+  @JsonKey(name: 'payment_reference')
+  String? get paymentReference => throw _privateConstructorUsedError;
+  @JsonKey(name: 'payment_proof_path')
+  String? get paymentProofPath => throw _privateConstructorUsedError;
+
+  /// Poblado por el repositorio desde el join `order_items(*)`.
+  List<OrderItem> get items => throw _privateConstructorUsedError;
+
+  /// Poblado por el repositorio desde el join `stores(...)`.
+  @JsonKey(name: 'store_name')
+  String? get storeName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'store_sinpe_number')
+  String? get storeSinpeNumber => throw _privateConstructorUsedError;
 
   /// Serializes this Order to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,17 +80,28 @@ abstract class $OrderCopyWith<$Res> {
   @useResult
   $Res call({
     String id,
-    String restaurantName,
-    List<CartItem> items,
+    @JsonKey(name: 'customer_id') String customerId,
+    @JsonKey(name: 'store_id') String storeId,
+    @JsonKey(name: 'driver_id') String? driverId,
     OrderStatus status,
+    @JsonKey(name: 'delivery_method') DeliveryMethod deliveryMethod,
+    @JsonKey(name: 'payment_method') OrderPaymentMethod paymentMethod,
+    @JsonKey(name: 'address_label') String? addressLabel,
+    @JsonKey(name: 'address_detail') String? addressDetail,
+    double? latitude,
+    double? longitude,
     double subtotal,
-    double tax,
-    double deliveryCost,
-    double discount,
+    @JsonKey(name: 'delivery_fee') double deliveryFee,
     double total,
-    int estimatedDeliveryTime,
-    DateTime createdAt,
-    DateTime? estimatedArrival,
+    String? notes,
+    @JsonKey(name: 'created_at') DateTime createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
+    @JsonKey(name: 'payment_status') PaymentStatus paymentStatus,
+    @JsonKey(name: 'payment_reference') String? paymentReference,
+    @JsonKey(name: 'payment_proof_path') String? paymentProofPath,
+    List<OrderItem> items,
+    @JsonKey(name: 'store_name') String? storeName,
+    @JsonKey(name: 'store_sinpe_number') String? storeSinpeNumber,
   });
 }
 
@@ -80,17 +121,28 @@ class _$OrderCopyWithImpl<$Res, $Val extends Order>
   @override
   $Res call({
     Object? id = null,
-    Object? restaurantName = null,
-    Object? items = null,
+    Object? customerId = null,
+    Object? storeId = null,
+    Object? driverId = freezed,
     Object? status = null,
+    Object? deliveryMethod = null,
+    Object? paymentMethod = null,
+    Object? addressLabel = freezed,
+    Object? addressDetail = freezed,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
     Object? subtotal = null,
-    Object? tax = null,
-    Object? deliveryCost = null,
-    Object? discount = null,
+    Object? deliveryFee = null,
     Object? total = null,
-    Object? estimatedDeliveryTime = null,
+    Object? notes = freezed,
     Object? createdAt = null,
-    Object? estimatedArrival = freezed,
+    Object? updatedAt = freezed,
+    Object? paymentStatus = null,
+    Object? paymentReference = freezed,
+    Object? paymentProofPath = freezed,
+    Object? items = null,
+    Object? storeName = freezed,
+    Object? storeSinpeNumber = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -99,61 +151,116 @@ class _$OrderCopyWithImpl<$Res, $Val extends Order>
                     ? _value.id
                     : id // ignore: cast_nullable_to_non_nullable
                         as String,
-            restaurantName:
-                null == restaurantName
-                    ? _value.restaurantName
-                    : restaurantName // ignore: cast_nullable_to_non_nullable
+            customerId:
+                null == customerId
+                    ? _value.customerId
+                    : customerId // ignore: cast_nullable_to_non_nullable
                         as String,
-            items:
-                null == items
-                    ? _value.items
-                    : items // ignore: cast_nullable_to_non_nullable
-                        as List<CartItem>,
+            storeId:
+                null == storeId
+                    ? _value.storeId
+                    : storeId // ignore: cast_nullable_to_non_nullable
+                        as String,
+            driverId:
+                freezed == driverId
+                    ? _value.driverId
+                    : driverId // ignore: cast_nullable_to_non_nullable
+                        as String?,
             status:
                 null == status
                     ? _value.status
                     : status // ignore: cast_nullable_to_non_nullable
                         as OrderStatus,
+            deliveryMethod:
+                null == deliveryMethod
+                    ? _value.deliveryMethod
+                    : deliveryMethod // ignore: cast_nullable_to_non_nullable
+                        as DeliveryMethod,
+            paymentMethod:
+                null == paymentMethod
+                    ? _value.paymentMethod
+                    : paymentMethod // ignore: cast_nullable_to_non_nullable
+                        as OrderPaymentMethod,
+            addressLabel:
+                freezed == addressLabel
+                    ? _value.addressLabel
+                    : addressLabel // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            addressDetail:
+                freezed == addressDetail
+                    ? _value.addressDetail
+                    : addressDetail // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            latitude:
+                freezed == latitude
+                    ? _value.latitude
+                    : latitude // ignore: cast_nullable_to_non_nullable
+                        as double?,
+            longitude:
+                freezed == longitude
+                    ? _value.longitude
+                    : longitude // ignore: cast_nullable_to_non_nullable
+                        as double?,
             subtotal:
                 null == subtotal
                     ? _value.subtotal
                     : subtotal // ignore: cast_nullable_to_non_nullable
                         as double,
-            tax:
-                null == tax
-                    ? _value.tax
-                    : tax // ignore: cast_nullable_to_non_nullable
-                        as double,
-            deliveryCost:
-                null == deliveryCost
-                    ? _value.deliveryCost
-                    : deliveryCost // ignore: cast_nullable_to_non_nullable
-                        as double,
-            discount:
-                null == discount
-                    ? _value.discount
-                    : discount // ignore: cast_nullable_to_non_nullable
+            deliveryFee:
+                null == deliveryFee
+                    ? _value.deliveryFee
+                    : deliveryFee // ignore: cast_nullable_to_non_nullable
                         as double,
             total:
                 null == total
                     ? _value.total
                     : total // ignore: cast_nullable_to_non_nullable
                         as double,
-            estimatedDeliveryTime:
-                null == estimatedDeliveryTime
-                    ? _value.estimatedDeliveryTime
-                    : estimatedDeliveryTime // ignore: cast_nullable_to_non_nullable
-                        as int,
+            notes:
+                freezed == notes
+                    ? _value.notes
+                    : notes // ignore: cast_nullable_to_non_nullable
+                        as String?,
             createdAt:
                 null == createdAt
                     ? _value.createdAt
                     : createdAt // ignore: cast_nullable_to_non_nullable
                         as DateTime,
-            estimatedArrival:
-                freezed == estimatedArrival
-                    ? _value.estimatedArrival
-                    : estimatedArrival // ignore: cast_nullable_to_non_nullable
+            updatedAt:
+                freezed == updatedAt
+                    ? _value.updatedAt
+                    : updatedAt // ignore: cast_nullable_to_non_nullable
                         as DateTime?,
+            paymentStatus:
+                null == paymentStatus
+                    ? _value.paymentStatus
+                    : paymentStatus // ignore: cast_nullable_to_non_nullable
+                        as PaymentStatus,
+            paymentReference:
+                freezed == paymentReference
+                    ? _value.paymentReference
+                    : paymentReference // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            paymentProofPath:
+                freezed == paymentProofPath
+                    ? _value.paymentProofPath
+                    : paymentProofPath // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            items:
+                null == items
+                    ? _value.items
+                    : items // ignore: cast_nullable_to_non_nullable
+                        as List<OrderItem>,
+            storeName:
+                freezed == storeName
+                    ? _value.storeName
+                    : storeName // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            storeSinpeNumber:
+                freezed == storeSinpeNumber
+                    ? _value.storeSinpeNumber
+                    : storeSinpeNumber // ignore: cast_nullable_to_non_nullable
+                        as String?,
           )
           as $Val,
     );
@@ -170,17 +277,28 @@ abstract class _$$OrderImplCopyWith<$Res> implements $OrderCopyWith<$Res> {
   @useResult
   $Res call({
     String id,
-    String restaurantName,
-    List<CartItem> items,
+    @JsonKey(name: 'customer_id') String customerId,
+    @JsonKey(name: 'store_id') String storeId,
+    @JsonKey(name: 'driver_id') String? driverId,
     OrderStatus status,
+    @JsonKey(name: 'delivery_method') DeliveryMethod deliveryMethod,
+    @JsonKey(name: 'payment_method') OrderPaymentMethod paymentMethod,
+    @JsonKey(name: 'address_label') String? addressLabel,
+    @JsonKey(name: 'address_detail') String? addressDetail,
+    double? latitude,
+    double? longitude,
     double subtotal,
-    double tax,
-    double deliveryCost,
-    double discount,
+    @JsonKey(name: 'delivery_fee') double deliveryFee,
     double total,
-    int estimatedDeliveryTime,
-    DateTime createdAt,
-    DateTime? estimatedArrival,
+    String? notes,
+    @JsonKey(name: 'created_at') DateTime createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
+    @JsonKey(name: 'payment_status') PaymentStatus paymentStatus,
+    @JsonKey(name: 'payment_reference') String? paymentReference,
+    @JsonKey(name: 'payment_proof_path') String? paymentProofPath,
+    List<OrderItem> items,
+    @JsonKey(name: 'store_name') String? storeName,
+    @JsonKey(name: 'store_sinpe_number') String? storeSinpeNumber,
   });
 }
 
@@ -199,17 +317,28 @@ class __$$OrderImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? id = null,
-    Object? restaurantName = null,
-    Object? items = null,
+    Object? customerId = null,
+    Object? storeId = null,
+    Object? driverId = freezed,
     Object? status = null,
+    Object? deliveryMethod = null,
+    Object? paymentMethod = null,
+    Object? addressLabel = freezed,
+    Object? addressDetail = freezed,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
     Object? subtotal = null,
-    Object? tax = null,
-    Object? deliveryCost = null,
-    Object? discount = null,
+    Object? deliveryFee = null,
     Object? total = null,
-    Object? estimatedDeliveryTime = null,
+    Object? notes = freezed,
     Object? createdAt = null,
-    Object? estimatedArrival = freezed,
+    Object? updatedAt = freezed,
+    Object? paymentStatus = null,
+    Object? paymentReference = freezed,
+    Object? paymentProofPath = freezed,
+    Object? items = null,
+    Object? storeName = freezed,
+    Object? storeSinpeNumber = freezed,
   }) {
     return _then(
       _$OrderImpl(
@@ -218,61 +347,116 @@ class __$$OrderImplCopyWithImpl<$Res>
                 ? _value.id
                 : id // ignore: cast_nullable_to_non_nullable
                     as String,
-        restaurantName:
-            null == restaurantName
-                ? _value.restaurantName
-                : restaurantName // ignore: cast_nullable_to_non_nullable
+        customerId:
+            null == customerId
+                ? _value.customerId
+                : customerId // ignore: cast_nullable_to_non_nullable
                     as String,
-        items:
-            null == items
-                ? _value._items
-                : items // ignore: cast_nullable_to_non_nullable
-                    as List<CartItem>,
+        storeId:
+            null == storeId
+                ? _value.storeId
+                : storeId // ignore: cast_nullable_to_non_nullable
+                    as String,
+        driverId:
+            freezed == driverId
+                ? _value.driverId
+                : driverId // ignore: cast_nullable_to_non_nullable
+                    as String?,
         status:
             null == status
                 ? _value.status
                 : status // ignore: cast_nullable_to_non_nullable
                     as OrderStatus,
+        deliveryMethod:
+            null == deliveryMethod
+                ? _value.deliveryMethod
+                : deliveryMethod // ignore: cast_nullable_to_non_nullable
+                    as DeliveryMethod,
+        paymentMethod:
+            null == paymentMethod
+                ? _value.paymentMethod
+                : paymentMethod // ignore: cast_nullable_to_non_nullable
+                    as OrderPaymentMethod,
+        addressLabel:
+            freezed == addressLabel
+                ? _value.addressLabel
+                : addressLabel // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        addressDetail:
+            freezed == addressDetail
+                ? _value.addressDetail
+                : addressDetail // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        latitude:
+            freezed == latitude
+                ? _value.latitude
+                : latitude // ignore: cast_nullable_to_non_nullable
+                    as double?,
+        longitude:
+            freezed == longitude
+                ? _value.longitude
+                : longitude // ignore: cast_nullable_to_non_nullable
+                    as double?,
         subtotal:
             null == subtotal
                 ? _value.subtotal
                 : subtotal // ignore: cast_nullable_to_non_nullable
                     as double,
-        tax:
-            null == tax
-                ? _value.tax
-                : tax // ignore: cast_nullable_to_non_nullable
-                    as double,
-        deliveryCost:
-            null == deliveryCost
-                ? _value.deliveryCost
-                : deliveryCost // ignore: cast_nullable_to_non_nullable
-                    as double,
-        discount:
-            null == discount
-                ? _value.discount
-                : discount // ignore: cast_nullable_to_non_nullable
+        deliveryFee:
+            null == deliveryFee
+                ? _value.deliveryFee
+                : deliveryFee // ignore: cast_nullable_to_non_nullable
                     as double,
         total:
             null == total
                 ? _value.total
                 : total // ignore: cast_nullable_to_non_nullable
                     as double,
-        estimatedDeliveryTime:
-            null == estimatedDeliveryTime
-                ? _value.estimatedDeliveryTime
-                : estimatedDeliveryTime // ignore: cast_nullable_to_non_nullable
-                    as int,
+        notes:
+            freezed == notes
+                ? _value.notes
+                : notes // ignore: cast_nullable_to_non_nullable
+                    as String?,
         createdAt:
             null == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                     as DateTime,
-        estimatedArrival:
-            freezed == estimatedArrival
-                ? _value.estimatedArrival
-                : estimatedArrival // ignore: cast_nullable_to_non_nullable
+        updatedAt:
+            freezed == updatedAt
+                ? _value.updatedAt
+                : updatedAt // ignore: cast_nullable_to_non_nullable
                     as DateTime?,
+        paymentStatus:
+            null == paymentStatus
+                ? _value.paymentStatus
+                : paymentStatus // ignore: cast_nullable_to_non_nullable
+                    as PaymentStatus,
+        paymentReference:
+            freezed == paymentReference
+                ? _value.paymentReference
+                : paymentReference // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        paymentProofPath:
+            freezed == paymentProofPath
+                ? _value.paymentProofPath
+                : paymentProofPath // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        items:
+            null == items
+                ? _value._items
+                : items // ignore: cast_nullable_to_non_nullable
+                    as List<OrderItem>,
+        storeName:
+            freezed == storeName
+                ? _value.storeName
+                : storeName // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        storeSinpeNumber:
+            freezed == storeSinpeNumber
+                ? _value.storeSinpeNumber
+                : storeSinpeNumber // ignore: cast_nullable_to_non_nullable
+                    as String?,
       ),
     );
   }
@@ -280,21 +464,36 @@ class __$$OrderImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$OrderImpl implements _Order {
+class _$OrderImpl extends _Order {
   const _$OrderImpl({
     required this.id,
-    required this.restaurantName,
-    required final List<CartItem> items,
-    this.status = OrderStatus.confirmed,
+    @JsonKey(name: 'customer_id') required this.customerId,
+    @JsonKey(name: 'store_id') required this.storeId,
+    @JsonKey(name: 'driver_id') this.driverId,
+    this.status = OrderStatus.pending,
+    @JsonKey(name: 'delivery_method')
+    this.deliveryMethod = DeliveryMethod.delivery,
+    @JsonKey(name: 'payment_method')
+    this.paymentMethod = OrderPaymentMethod.cash,
+    @JsonKey(name: 'address_label') this.addressLabel,
+    @JsonKey(name: 'address_detail') this.addressDetail,
+    this.latitude,
+    this.longitude,
     required this.subtotal,
-    required this.tax,
-    required this.deliveryCost,
-    required this.discount,
+    @JsonKey(name: 'delivery_fee') this.deliveryFee = 0,
     required this.total,
-    required this.estimatedDeliveryTime,
-    required this.createdAt,
-    this.estimatedArrival,
-  }) : _items = items;
+    this.notes,
+    @JsonKey(name: 'created_at') required this.createdAt,
+    @JsonKey(name: 'updated_at') this.updatedAt,
+    @JsonKey(name: 'payment_status')
+    this.paymentStatus = PaymentStatus.notRequired,
+    @JsonKey(name: 'payment_reference') this.paymentReference,
+    @JsonKey(name: 'payment_proof_path') this.paymentProofPath,
+    final List<OrderItem> items = const [],
+    @JsonKey(name: 'store_name') this.storeName,
+    @JsonKey(name: 'store_sinpe_number') this.storeSinpeNumber,
+  }) : _items = items,
+       super._();
 
   factory _$OrderImpl.fromJson(Map<String, dynamic> json) =>
       _$$OrderImplFromJson(json);
@@ -302,38 +501,81 @@ class _$OrderImpl implements _Order {
   @override
   final String id;
   @override
-  final String restaurantName;
-  final List<CartItem> _items;
+  @JsonKey(name: 'customer_id')
+  final String customerId;
   @override
-  List<CartItem> get items {
+  @JsonKey(name: 'store_id')
+  final String storeId;
+  @override
+  @JsonKey(name: 'driver_id')
+  final String? driverId;
+  @override
+  @JsonKey()
+  final OrderStatus status;
+  @override
+  @JsonKey(name: 'delivery_method')
+  final DeliveryMethod deliveryMethod;
+  @override
+  @JsonKey(name: 'payment_method')
+  final OrderPaymentMethod paymentMethod;
+  @override
+  @JsonKey(name: 'address_label')
+  final String? addressLabel;
+  @override
+  @JsonKey(name: 'address_detail')
+  final String? addressDetail;
+  @override
+  final double? latitude;
+  @override
+  final double? longitude;
+  @override
+  final double subtotal;
+  @override
+  @JsonKey(name: 'delivery_fee')
+  final double deliveryFee;
+  @override
+  final double total;
+  @override
+  final String? notes;
+  @override
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
+  @override
+  @JsonKey(name: 'payment_status')
+  final PaymentStatus paymentStatus;
+  @override
+  @JsonKey(name: 'payment_reference')
+  final String? paymentReference;
+  @override
+  @JsonKey(name: 'payment_proof_path')
+  final String? paymentProofPath;
+
+  /// Poblado por el repositorio desde el join `order_items(*)`.
+  final List<OrderItem> _items;
+
+  /// Poblado por el repositorio desde el join `order_items(*)`.
+  @override
+  @JsonKey()
+  List<OrderItem> get items {
     if (_items is EqualUnmodifiableListView) return _items;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_items);
   }
 
+  /// Poblado por el repositorio desde el join `stores(...)`.
   @override
-  @JsonKey()
-  final OrderStatus status;
+  @JsonKey(name: 'store_name')
+  final String? storeName;
   @override
-  final double subtotal;
-  @override
-  final double tax;
-  @override
-  final double deliveryCost;
-  @override
-  final double discount;
-  @override
-  final double total;
-  @override
-  final int estimatedDeliveryTime;
-  @override
-  final DateTime createdAt;
-  @override
-  final DateTime? estimatedArrival;
+  @JsonKey(name: 'store_sinpe_number')
+  final String? storeSinpeNumber;
 
   @override
   String toString() {
-    return 'Order(id: $id, restaurantName: $restaurantName, items: $items, status: $status, subtotal: $subtotal, tax: $tax, deliveryCost: $deliveryCost, discount: $discount, total: $total, estimatedDeliveryTime: $estimatedDeliveryTime, createdAt: $createdAt, estimatedArrival: $estimatedArrival)';
+    return 'Order(id: $id, customerId: $customerId, storeId: $storeId, driverId: $driverId, status: $status, deliveryMethod: $deliveryMethod, paymentMethod: $paymentMethod, addressLabel: $addressLabel, addressDetail: $addressDetail, latitude: $latitude, longitude: $longitude, subtotal: $subtotal, deliveryFee: $deliveryFee, total: $total, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt, paymentStatus: $paymentStatus, paymentReference: $paymentReference, paymentProofPath: $paymentProofPath, items: $items, storeName: $storeName, storeSinpeNumber: $storeSinpeNumber)';
   }
 
   @override
@@ -342,43 +584,75 @@ class _$OrderImpl implements _Order {
         (other.runtimeType == runtimeType &&
             other is _$OrderImpl &&
             (identical(other.id, id) || other.id == id) &&
-            (identical(other.restaurantName, restaurantName) ||
-                other.restaurantName == restaurantName) &&
-            const DeepCollectionEquality().equals(other._items, _items) &&
+            (identical(other.customerId, customerId) ||
+                other.customerId == customerId) &&
+            (identical(other.storeId, storeId) || other.storeId == storeId) &&
+            (identical(other.driverId, driverId) ||
+                other.driverId == driverId) &&
             (identical(other.status, status) || other.status == status) &&
+            (identical(other.deliveryMethod, deliveryMethod) ||
+                other.deliveryMethod == deliveryMethod) &&
+            (identical(other.paymentMethod, paymentMethod) ||
+                other.paymentMethod == paymentMethod) &&
+            (identical(other.addressLabel, addressLabel) ||
+                other.addressLabel == addressLabel) &&
+            (identical(other.addressDetail, addressDetail) ||
+                other.addressDetail == addressDetail) &&
+            (identical(other.latitude, latitude) ||
+                other.latitude == latitude) &&
+            (identical(other.longitude, longitude) ||
+                other.longitude == longitude) &&
             (identical(other.subtotal, subtotal) ||
                 other.subtotal == subtotal) &&
-            (identical(other.tax, tax) || other.tax == tax) &&
-            (identical(other.deliveryCost, deliveryCost) ||
-                other.deliveryCost == deliveryCost) &&
-            (identical(other.discount, discount) ||
-                other.discount == discount) &&
+            (identical(other.deliveryFee, deliveryFee) ||
+                other.deliveryFee == deliveryFee) &&
             (identical(other.total, total) || other.total == total) &&
-            (identical(other.estimatedDeliveryTime, estimatedDeliveryTime) ||
-                other.estimatedDeliveryTime == estimatedDeliveryTime) &&
+            (identical(other.notes, notes) || other.notes == notes) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.estimatedArrival, estimatedArrival) ||
-                other.estimatedArrival == estimatedArrival));
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
+            (identical(other.paymentStatus, paymentStatus) ||
+                other.paymentStatus == paymentStatus) &&
+            (identical(other.paymentReference, paymentReference) ||
+                other.paymentReference == paymentReference) &&
+            (identical(other.paymentProofPath, paymentProofPath) ||
+                other.paymentProofPath == paymentProofPath) &&
+            const DeepCollectionEquality().equals(other._items, _items) &&
+            (identical(other.storeName, storeName) ||
+                other.storeName == storeName) &&
+            (identical(other.storeSinpeNumber, storeSinpeNumber) ||
+                other.storeSinpeNumber == storeSinpeNumber));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
-    restaurantName,
-    const DeepCollectionEquality().hash(_items),
+    customerId,
+    storeId,
+    driverId,
     status,
+    deliveryMethod,
+    paymentMethod,
+    addressLabel,
+    addressDetail,
+    latitude,
+    longitude,
     subtotal,
-    tax,
-    deliveryCost,
-    discount,
+    deliveryFee,
     total,
-    estimatedDeliveryTime,
+    notes,
     createdAt,
-    estimatedArrival,
-  );
+    updatedAt,
+    paymentStatus,
+    paymentReference,
+    paymentProofPath,
+    const DeepCollectionEquality().hash(_items),
+    storeName,
+    storeSinpeNumber,
+  ]);
 
   /// Create a copy of Order
   /// with the given fields replaced by the non-null parameter values.
@@ -394,48 +668,101 @@ class _$OrderImpl implements _Order {
   }
 }
 
-abstract class _Order implements Order {
+abstract class _Order extends Order {
   const factory _Order({
     required final String id,
-    required final String restaurantName,
-    required final List<CartItem> items,
+    @JsonKey(name: 'customer_id') required final String customerId,
+    @JsonKey(name: 'store_id') required final String storeId,
+    @JsonKey(name: 'driver_id') final String? driverId,
     final OrderStatus status,
+    @JsonKey(name: 'delivery_method') final DeliveryMethod deliveryMethod,
+    @JsonKey(name: 'payment_method') final OrderPaymentMethod paymentMethod,
+    @JsonKey(name: 'address_label') final String? addressLabel,
+    @JsonKey(name: 'address_detail') final String? addressDetail,
+    final double? latitude,
+    final double? longitude,
     required final double subtotal,
-    required final double tax,
-    required final double deliveryCost,
-    required final double discount,
+    @JsonKey(name: 'delivery_fee') final double deliveryFee,
     required final double total,
-    required final int estimatedDeliveryTime,
-    required final DateTime createdAt,
-    final DateTime? estimatedArrival,
+    final String? notes,
+    @JsonKey(name: 'created_at') required final DateTime createdAt,
+    @JsonKey(name: 'updated_at') final DateTime? updatedAt,
+    @JsonKey(name: 'payment_status') final PaymentStatus paymentStatus,
+    @JsonKey(name: 'payment_reference') final String? paymentReference,
+    @JsonKey(name: 'payment_proof_path') final String? paymentProofPath,
+    final List<OrderItem> items,
+    @JsonKey(name: 'store_name') final String? storeName,
+    @JsonKey(name: 'store_sinpe_number') final String? storeSinpeNumber,
   }) = _$OrderImpl;
+  const _Order._() : super._();
 
   factory _Order.fromJson(Map<String, dynamic> json) = _$OrderImpl.fromJson;
 
   @override
   String get id;
   @override
-  String get restaurantName;
+  @JsonKey(name: 'customer_id')
+  String get customerId;
   @override
-  List<CartItem> get items;
+  @JsonKey(name: 'store_id')
+  String get storeId;
+  @override
+  @JsonKey(name: 'driver_id')
+  String? get driverId;
   @override
   OrderStatus get status;
   @override
+  @JsonKey(name: 'delivery_method')
+  DeliveryMethod get deliveryMethod;
+  @override
+  @JsonKey(name: 'payment_method')
+  OrderPaymentMethod get paymentMethod;
+  @override
+  @JsonKey(name: 'address_label')
+  String? get addressLabel;
+  @override
+  @JsonKey(name: 'address_detail')
+  String? get addressDetail;
+  @override
+  double? get latitude;
+  @override
+  double? get longitude;
+  @override
   double get subtotal;
   @override
-  double get tax;
-  @override
-  double get deliveryCost;
-  @override
-  double get discount;
+  @JsonKey(name: 'delivery_fee')
+  double get deliveryFee;
   @override
   double get total;
   @override
-  int get estimatedDeliveryTime;
+  String? get notes;
   @override
+  @JsonKey(name: 'created_at')
   DateTime get createdAt;
   @override
-  DateTime? get estimatedArrival;
+  @JsonKey(name: 'updated_at')
+  DateTime? get updatedAt;
+  @override
+  @JsonKey(name: 'payment_status')
+  PaymentStatus get paymentStatus;
+  @override
+  @JsonKey(name: 'payment_reference')
+  String? get paymentReference;
+  @override
+  @JsonKey(name: 'payment_proof_path')
+  String? get paymentProofPath;
+
+  /// Poblado por el repositorio desde el join `order_items(*)`.
+  @override
+  List<OrderItem> get items;
+
+  /// Poblado por el repositorio desde el join `stores(...)`.
+  @override
+  @JsonKey(name: 'store_name')
+  String? get storeName;
+  @override
+  @JsonKey(name: 'store_sinpe_number')
+  String? get storeSinpeNumber;
 
   /// Create a copy of Order
   /// with the given fields replaced by the non-null parameter values.

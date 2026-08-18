@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:windwaker/core/config/di_config.dart';
 import 'package:windwaker/core/services/auth_service.dart';
+import 'package:windwaker/core/services/profile_validation_service.dart';
 import 'package:windwaker/core/services/app_intro_service.dart';
 
 /// Pantalla de carga inicial de la aplicación.
@@ -23,6 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final authService = getIt<AuthService>();
+    final profileValidationService = getIt<ProfileValidationService>();
     final appIntroService = getIt<AppIntroService>();
 
     // Verificar si el usuario ya vio la introducción
@@ -35,15 +37,27 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Verificar si el usuario está autenticado
     final isAuthenticated = authService.isAuthenticated();
-    final isProfileComplete = authService.isProfileComplete();
 
     if (!mounted) return;
 
     if (!isAuthenticated) {
       context.go('/auth');
-    } else if (!isProfileComplete) {
-      context.go('/complete-profile');
+      return;
+    }
+
+    // Verificar si el perfil está completo usando ProfileValidationService
+    // Esto valida contra la BD, no solo contra Supabase Auth
+    final isProfileComplete =
+        await profileValidationService.isCurrentSessionValid();
+
+    if (!mounted) return;
+
+    if (!isProfileComplete) {
+      // Si está autenticado pero no tiene perfil completo en la BD,
+      // debe ir a auth para completar el flujo OTP
+      context.go('/auth');
     } else {
+      // Perfil completo y validado en la BD, continuar al flujo normal
       context.go('/location-permission');
     }
   }

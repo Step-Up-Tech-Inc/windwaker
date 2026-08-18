@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:windwaker/screens/order_tracking/cubit/order_tracking_cubit.dart';
+import 'package:windwaker/screens/order_tracking/widgets/sinpe_payment_section.dart';
 import 'package:windwaker/core/models/order_tracking_status.dart';
 
 /// Pantalla principal de seguimiento de pedido.
@@ -38,6 +39,8 @@ class OrderTrackingScreen extends StatelessWidget {
                   (loaded) => SingleChildScrollView(
                     child: Column(
                       children: [
+                        if (loaded.order != null)
+                          SinpePaymentSection(order: loaded.order!),
                         _OrderTimeline(timeline: loaded.timeline),
                         _OrderDeliveryDetails(
                           orderId: loaded.orderId,

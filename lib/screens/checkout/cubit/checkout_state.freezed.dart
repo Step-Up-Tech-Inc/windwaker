@@ -20,7 +20,10 @@ mixin _$CheckoutState {
   bool get isLoading => throw _privateConstructorUsedError;
   String? get error => throw _privateConstructorUsedError;
   List<CartItem> get cartItems => throw _privateConstructorUsedError;
+  List<Address> get savedAddresses => throw _privateConstructorUsedError;
   String get address => throw _privateConstructorUsedError;
+  double? get latitude => throw _privateConstructorUsedError;
+  double? get longitude => throw _privateConstructorUsedError;
   String get addressNickname => throw _privateConstructorUsedError;
   String get addressType => throw _privateConstructorUsedError;
   String get deliveryInstructions => throw _privateConstructorUsedError;
@@ -57,7 +60,10 @@ abstract class $CheckoutStateCopyWith<$Res> {
     bool isLoading,
     String? error,
     List<CartItem> cartItems,
+    List<Address> savedAddresses,
     String address,
+    double? latitude,
+    double? longitude,
     String addressNickname,
     String addressType,
     String deliveryInstructions,
@@ -96,7 +102,10 @@ class _$CheckoutStateCopyWithImpl<$Res, $Val extends CheckoutState>
     Object? isLoading = null,
     Object? error = freezed,
     Object? cartItems = null,
+    Object? savedAddresses = null,
     Object? address = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
     Object? addressNickname = null,
     Object? addressType = null,
     Object? deliveryInstructions = null,
@@ -132,11 +141,26 @@ class _$CheckoutStateCopyWithImpl<$Res, $Val extends CheckoutState>
                     ? _value.cartItems
                     : cartItems // ignore: cast_nullable_to_non_nullable
                         as List<CartItem>,
+            savedAddresses:
+                null == savedAddresses
+                    ? _value.savedAddresses
+                    : savedAddresses // ignore: cast_nullable_to_non_nullable
+                        as List<Address>,
             address:
                 null == address
                     ? _value.address
                     : address // ignore: cast_nullable_to_non_nullable
                         as String,
+            latitude:
+                freezed == latitude
+                    ? _value.latitude
+                    : latitude // ignore: cast_nullable_to_non_nullable
+                        as double?,
+            longitude:
+                freezed == longitude
+                    ? _value.longitude
+                    : longitude // ignore: cast_nullable_to_non_nullable
+                        as double?,
             addressNickname:
                 null == addressNickname
                     ? _value.addressNickname
@@ -241,7 +265,10 @@ abstract class _$$CheckoutStateImplCopyWith<$Res>
     bool isLoading,
     String? error,
     List<CartItem> cartItems,
+    List<Address> savedAddresses,
     String address,
+    double? latitude,
+    double? longitude,
     String addressNickname,
     String addressType,
     String deliveryInstructions,
@@ -279,7 +306,10 @@ class __$$CheckoutStateImplCopyWithImpl<$Res>
     Object? isLoading = null,
     Object? error = freezed,
     Object? cartItems = null,
+    Object? savedAddresses = null,
     Object? address = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
     Object? addressNickname = null,
     Object? addressType = null,
     Object? deliveryInstructions = null,
@@ -315,11 +345,26 @@ class __$$CheckoutStateImplCopyWithImpl<$Res>
                 ? _value._cartItems
                 : cartItems // ignore: cast_nullable_to_non_nullable
                     as List<CartItem>,
+        savedAddresses:
+            null == savedAddresses
+                ? _value._savedAddresses
+                : savedAddresses // ignore: cast_nullable_to_non_nullable
+                    as List<Address>,
         address:
             null == address
                 ? _value.address
                 : address // ignore: cast_nullable_to_non_nullable
                     as String,
+        latitude:
+            freezed == latitude
+                ? _value.latitude
+                : latitude // ignore: cast_nullable_to_non_nullable
+                    as double?,
+        longitude:
+            freezed == longitude
+                ? _value.longitude
+                : longitude // ignore: cast_nullable_to_non_nullable
+                    as double?,
         addressNickname:
             null == addressNickname
                 ? _value.addressNickname
@@ -417,7 +462,10 @@ class _$CheckoutStateImpl implements _CheckoutState {
     this.isLoading = false,
     this.error = null,
     final List<CartItem> cartItems = const [],
+    final List<Address> savedAddresses = const [],
     this.address = '',
+    this.latitude,
+    this.longitude,
     this.addressNickname = '',
     this.addressType = 'Casa',
     this.deliveryInstructions = '',
@@ -435,7 +483,8 @@ class _$CheckoutStateImpl implements _CheckoutState {
     this.orderConfirmationId = '',
     this.estimatedDeliveryTime = '',
     this.storeName = '',
-  }) : _cartItems = cartItems;
+  }) : _cartItems = cartItems,
+       _savedAddresses = savedAddresses;
 
   @override
   @JsonKey()
@@ -452,9 +501,22 @@ class _$CheckoutStateImpl implements _CheckoutState {
     return EqualUnmodifiableListView(_cartItems);
   }
 
+  final List<Address> _savedAddresses;
+  @override
+  @JsonKey()
+  List<Address> get savedAddresses {
+    if (_savedAddresses is EqualUnmodifiableListView) return _savedAddresses;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_savedAddresses);
+  }
+
   @override
   @JsonKey()
   final String address;
+  @override
+  final double? latitude;
+  @override
+  final double? longitude;
   @override
   @JsonKey()
   final String addressNickname;
@@ -509,7 +571,7 @@ class _$CheckoutStateImpl implements _CheckoutState {
 
   @override
   String toString() {
-    return 'CheckoutState(isLoading: $isLoading, error: $error, cartItems: $cartItems, address: $address, addressNickname: $addressNickname, addressType: $addressType, deliveryInstructions: $deliveryInstructions, saveAddress: $saveAddress, paymentMethod: $paymentMethod, savePaymentMethod: $savePaymentMethod, subtotal: $subtotal, tax: $tax, deliveryCost: $deliveryCost, discount: $discount, total: $total, currentStep: $currentStep, totalSteps: $totalSteps, orderPlaced: $orderPlaced, orderConfirmationId: $orderConfirmationId, estimatedDeliveryTime: $estimatedDeliveryTime, storeName: $storeName)';
+    return 'CheckoutState(isLoading: $isLoading, error: $error, cartItems: $cartItems, savedAddresses: $savedAddresses, address: $address, latitude: $latitude, longitude: $longitude, addressNickname: $addressNickname, addressType: $addressType, deliveryInstructions: $deliveryInstructions, saveAddress: $saveAddress, paymentMethod: $paymentMethod, savePaymentMethod: $savePaymentMethod, subtotal: $subtotal, tax: $tax, deliveryCost: $deliveryCost, discount: $discount, total: $total, currentStep: $currentStep, totalSteps: $totalSteps, orderPlaced: $orderPlaced, orderConfirmationId: $orderConfirmationId, estimatedDeliveryTime: $estimatedDeliveryTime, storeName: $storeName)';
   }
 
   @override
@@ -524,7 +586,15 @@ class _$CheckoutStateImpl implements _CheckoutState {
               other._cartItems,
               _cartItems,
             ) &&
+            const DeepCollectionEquality().equals(
+              other._savedAddresses,
+              _savedAddresses,
+            ) &&
             (identical(other.address, address) || other.address == address) &&
+            (identical(other.latitude, latitude) ||
+                other.latitude == latitude) &&
+            (identical(other.longitude, longitude) ||
+                other.longitude == longitude) &&
             (identical(other.addressNickname, addressNickname) ||
                 other.addressNickname == addressNickname) &&
             (identical(other.addressType, addressType) ||
@@ -565,7 +635,10 @@ class _$CheckoutStateImpl implements _CheckoutState {
     isLoading,
     error,
     const DeepCollectionEquality().hash(_cartItems),
+    const DeepCollectionEquality().hash(_savedAddresses),
     address,
+    latitude,
+    longitude,
     addressNickname,
     addressType,
     deliveryInstructions,
@@ -599,7 +672,10 @@ abstract class _CheckoutState implements CheckoutState {
     final bool isLoading,
     final String? error,
     final List<CartItem> cartItems,
+    final List<Address> savedAddresses,
     final String address,
+    final double? latitude,
+    final double? longitude,
     final String addressNickname,
     final String addressType,
     final String deliveryInstructions,
@@ -626,7 +702,13 @@ abstract class _CheckoutState implements CheckoutState {
   @override
   List<CartItem> get cartItems;
   @override
+  List<Address> get savedAddresses;
+  @override
   String get address;
+  @override
+  double? get latitude;
+  @override
+  double? get longitude;
   @override
   String get addressNickname;
   @override

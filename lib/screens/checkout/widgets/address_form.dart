@@ -1,10 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/models/address.dart';
+import '../../profile/address_editor_screen.dart';
 import '../cubit/checkout_cubit.dart';
 import '../cubit/checkout_state.dart';
 
 class AddressForm extends StatelessWidget {
   const AddressForm({super.key});
+
+  /// Selector de direcciones guardadas + opción de escribir una nueva.
+  void _showAddressPicker(BuildContext context, CheckoutState state) {
+    final cubit = context.read<CheckoutCubit>();
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Dirección de entrega',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              for (final Address address in state.savedAddresses)
+                ListTile(
+                  leading: Icon(
+                    address.isDefault ? Icons.home : Icons.place_outlined,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  title: Text(address.label),
+                  subtitle: Text(
+                    address.detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () {
+                    cubit.selectAddress(address);
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.add_location_alt_outlined),
+                title: const Text('Agregar nueva dirección'),
+                onTap: () async {
+                  Navigator.of(sheetContext).pop();
+                  final saved = await Navigator.of(context).push<Address>(
+                    MaterialPageRoute(
+                      builder: (_) => const AddressEditorScreen(),
+                    ),
+                  );
+                  if (saved != null) cubit.addSavedAddress(saved);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +76,7 @@ class AddressForm extends StatelessWidget {
           (previous, current) =>
               previous.address != current.address ||
               previous.addressType != current.addressType ||
+              previous.savedAddresses != current.savedAddresses ||
               previous.deliveryInstructions != current.deliveryInstructions,
       builder: (context, state) {
         return Card(
@@ -38,16 +100,7 @@ class AddressForm extends StatelessWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {
-                        // Acción para cambiar la dirección
-                        // Podría navegar a una pantalla de selección de dirección
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Función para cambiar dirección'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
+                      onPressed: () => _showAddressPicker(context, state),
                       child: Text(
                         'Cambiar',
                         style: TextStyle(
@@ -108,6 +161,7 @@ class AddressForm extends StatelessWidget {
                     );
                   },
                   maxLines: 3,
+                  maxLength: 500,
                   decoration: InputDecoration(
                     hintText: 'Ej: Casa color verde, portón negro...',
                     filled: true,

@@ -1,160 +1,175 @@
-# Configuración de Supabase
+# Configuración de Supabase - Tilarán en Línea
 
-Este directorio contiene las migraciones y configuraciones necesarias para Supabase.
+Este directorio contiene las migraciones SQL necesarias para configurar completamente la base de datos de Supabase.
 
-## Configuración de la Base de Datos
+## 📋 Requisitos Previos
 
-### 1. Estructura de la Tabla de Tiendas
+1. Tener una cuenta en [Supabase](https://supabase.com)
+2. Crear un nuevo proyecto en Supabase
+3. Obtener las credenciales del proyecto (URL y Anon Key)
 
-La aplicación requiere una tabla `stores` con la siguiente estructura:
+## 🚀 Instrucciones de Configuración
 
-```sql
-CREATE TABLE stores (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  image_url TEXT NOT NULL,
-  category TEXT NOT NULL,
-  rating NUMERIC(3,1) NOT NULL DEFAULT 0.0,
-  delivery_time_minutes INTEGER NOT NULL DEFAULT 30,
-  delivery_fee NUMERIC(5,2) NOT NULL DEFAULT 0.00,
-  is_open BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+### Paso 1: Crear Proyecto en Supabase
+
+1. Ve a [supabase.com](https://supabase.com) e inicia sesión
+2. Haz clic en "New Project"
+3. Completa la información:
+   - **Name**: Tilaran en Linea (o el nombre que prefieras)
+   - **Database Password**: Elige una contraseña segura
+   - **Region**: Selecciona la región más cercana
+4. Haz clic en "Create new project" y espera a que se complete la creación
+
+### Paso 2: Obtener Credenciales
+
+1. Una vez creado el proyecto, ve a **Project Settings** (ícono de engranaje en el menú lateral)
+2. Selecciona **API** en el menú de configuración
+3. Copia los siguientes valores:
+   - **URL**: Algo como `https://xxxxxxxxxxxxx.supabase.co`
+   - **anon/public key**: Un token JWT largo
+
+### Paso 3: Actualizar Configuración en la App
+
+Abre el archivo `lib/core/config/app_config.dart` y actualiza las siguientes líneas con tus credenciales:
+
+```dart
+static const String supabaseUrl = String.fromEnvironment(
+  'SUPABASE_URL',
+  defaultValue: 'TU_URL_AQUI', // Reemplaza con tu URL
+);
+
+static const String supabaseAnonKey = String.fromEnvironment(
+  'SUPABASE_ANON_KEY',
+  defaultValue: 'TU_ANON_KEY_AQUI', // Reemplaza con tu Anon Key
 );
 ```
 
-### 2. Función de Búsqueda
+### Paso 4: Ejecutar Scripts SQL
 
-Para habilitar la búsqueda de tiendas, debes crear la siguiente función SQL:
+Ve al **SQL Editor** en Supabase y ejecuta los scripts en el siguiente orden:
 
-```sql
-CREATE OR REPLACE FUNCTION search_stores(search_query TEXT)
-RETURNS SETOF stores AS $$
-BEGIN
-  RETURN QUERY
-  SELECT *
-  FROM stores
-  WHERE
-    name ILIKE '%' || search_query || '%'
-    OR description ILIKE '%' || search_query || '%'
-    OR category ILIKE '%' || search_query || '%'
-  ORDER BY
-    CASE WHEN name ILIKE '%' || search_query || '%' THEN 0 ELSE 1 END,
-    CASE WHEN category ILIKE '%' || search_query || '%' THEN 0 ELSE 1 END,
-    CASE WHEN description ILIKE '%' || search_query || '%' THEN 0 ELSE 1 END,
-    name;
-END;
-$$ LANGUAGE plpgsql;
-```
+#### 4.1. Ejecutar Script de Configuración de Base de Datos
 
-## Datos de Ejemplo
+1. En el SQL Editor, haz clic en "New query"
+2. Abre el archivo `supabase/migrations/01_complete_database_setup.sql`
+3. Copia todo el contenido y pégalo en el editor SQL
+4. Haz clic en "Run" para ejecutar el script
+5. Verifica que no haya errores (deberías ver "Success. No rows returned")
 
-Puedes insertar algunas tiendas de ejemplo con el siguiente SQL:
+Este script crea:
+- ✅ Tabla `profiles` para usuarios
+- ✅ Tabla `stores` para tiendas
+- ✅ Tabla `products` para productos
+- ✅ Tabla `inventory` para control de stock
+- ✅ Índices para mejorar rendimiento
+- ✅ Funciones SQL (`search_stores`, `upsert_profile`)
+- ✅ Triggers para actualización automática de timestamps
+- ✅ Políticas de seguridad (RLS)
 
-```sql
-INSERT INTO stores (name, description, image_url, category, rating, delivery_time_minutes, delivery_fee, is_open)
-VALUES
-  ('Restaurante El Sabor', 'Comida tradicional con el mejor sabor', 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4', 'Restaurante', 4.7, 30, 2.5, true),
-  ('Farmacia Salud', 'Tu salud es nuestra prioridad', 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de', 'Farmacia', 4.5, 20, 1.5, true),
-  ('Supermercado Express', 'Todo lo que necesitas en un solo lugar', 'https://images.unsplash.com/photo-1601598851547-4302969d0614', 'Supermercado', 4.3, 40, 3.0, true),
-  ('Café Aroma', 'El mejor café de la ciudad', 'https://images.unsplash.com/photo-1554118811-1e0d58224f24', 'Café', 4.8, 25, 2.0, true),
-  ('Tienda de Mascotas Patitas', 'Todo para tu mascota', 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee', 'Mascotas', 4.6, 35, 2.8, false);
-```
+#### 4.2. Ejecutar Script de Datos Iniciales
 
-## Políticas de Seguridad
+1. En el SQL Editor, crea una nueva query
+2. Abre el archivo `supabase/migrations/02_seed_stores_and_products.sql`
+3. Copia todo el contenido y pégalo en el editor SQL
+4. Haz clic en "Run" para ejecutar el script
+5. Verifica que no haya errores
 
-Las políticas de seguridad están configuradas para permitir que todos los usuarios puedan leer los datos de las tiendas, pero solo los administradores pueden crear, actualizar o eliminar tiendas.
+Este script inserta:
+- ✅ 8 tiendas (3 supermercados, 1 farmacia, 1 tienda de mascotas, 3 restaurantes)
+- ✅ Más de 150 productos distribuidos entre las tiendas
+- ✅ Inventario inicial para todos los productos
+
+### Paso 5: Verificar la Instalación
+
+Ejecuta las siguientes consultas en el SQL Editor para verificar que todo se creó correctamente:
 
 ```sql
--- Permitir lectura para todos
-CREATE POLICY "Permitir lectura a todos" ON stores
-  FOR SELECT USING (true);
+-- Verificar tiendas (debe retornar 8)
+SELECT COUNT(*) as total_stores FROM stores;
 
--- Permitir inserción solo a administradores
-CREATE POLICY "Permitir inserción a admins" ON stores
-  FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() IN (SELECT id FROM users WHERE is_admin = true));
+-- Ver todas las tiendas
+SELECT name, category, rating FROM stores ORDER BY category, name;
 
--- Permitir actualización solo a administradores
-CREATE POLICY "Permitir actualización a admins" ON stores
-  FOR UPDATE TO authenticated
-  USING (auth.uid() IN (SELECT id FROM users WHERE is_admin = true));
+-- Verificar productos (debe retornar más de 150)
+SELECT COUNT(*) as total_products FROM products;
 
--- Permitir eliminación solo a administradores
-CREATE POLICY "Permitir eliminación a admins" ON stores
-  FOR DELETE TO authenticated
-  USING (auth.uid() IN (SELECT id FROM users WHERE is_admin = true));
+-- Ver productos por tienda
+SELECT s.name as store_name, COUNT(p.id) as product_count
+FROM stores s
+LEFT JOIN products p ON s.id = p.store_id
+GROUP BY s.name
+ORDER BY s.name;
 ```
 
-## Aplicar Migraciones
+## 📊 Estructura de las Tiendas
 
-Para aplicar estas migraciones:
+Las 8 tiendas creadas son:
 
-1. Ve al panel de administración de Supabase
-2. Navega a la sección "SQL Editor"
-3. Copia y ejecuta los scripts de migración en el siguiente orden:
-   - `migrations/20230801000001_stores_table.sql`
-   - `migrations/20230801000000_stores_search_function.sql`
+1. **Mega Super Tilarán** (Supermercado) - 20 productos
+2. **Pali Tilarán** (Supermercado) - 15 productos
+3. **Compre Bien** (Supermercado) - 15 productos
+4. **Farmacia Vida Sana** (Farmacia) - 18 productos
+5. **Patitas Felices** (Mascotas) - 16 productos
+6. **Sabor Tico** (Restaurante) - 16 productos
+7. **Pizza Express** (Restaurante) - 17 productos
+8. **Cafetería Aroma** (Cafetería) - 18 productos
 
-# Scripts de Migración para Consolidar la Base de Datos
+## 🔧 Solución de Problemas
 
-Este directorio contiene scripts SQL para consolidar las tablas duplicadas en la base de datos, migrando todo al esquema `public`.
+### Error: "relation does not exist"
 
-## Problema
+Si ves este error, asegúrate de haber ejecutado primero el script `01_complete_database_setup.sql` antes de `02_seed_stores_and_products.sql`.
 
-Actualmente la base de datos tiene tablas duplicadas en diferentes esquemas:
-- `public.stores` y `marketplace.stores`
-- `public.products` y `marketplace.products`
-- `public.inventory` y `marketplace.inventory`
-- `public.negocios` (tabla duplicada de stores)
+### Error: "duplicate key value violates unique constraint"
 
-Esto causa inconsistencias y errores en la aplicación.
+Si ves este error al ejecutar el script de datos, significa que ya existen datos en las tablas. Puedes:
 
-## Solución
+1. Eliminar los datos existentes:
+```sql
+DELETE FROM inventory;
+DELETE FROM products;
+DELETE FROM stores;
+```
 
-Los scripts migran todos los datos al esquema `public` y eliminan las tablas duplicadas.
+2. Volver a ejecutar `02_seed_stores_and_products.sql`
 
-## Instrucciones de Ejecución
+### Las imágenes no se cargan en la app
 
-Ejecuta los scripts en el siguiente orden:
+Las URLs de imágenes usan Unsplash, que es un servicio gratuito. Si algunas imágenes no cargan, es normal. Puedes reemplazar las URLs con tus propias imágenes si lo deseas.
 
-1. **Preparación y Consolidación**
-   ```bash
-   supabase db reset # Solo si quieres resetear la base de datos (CUIDADO: borra todos los datos)
-   # O si prefieres mantener los datos:
-   psql -h localhost -p 54322 -U postgres -d postgres -f supabase/migrations/20240615_simple_consolidate.sql
-   ```
+## 📱 Probar la Aplicación
 
-2. **Migración de Datos**
-   ```bash
-   psql -h localhost -p 54322 -U postgres -d postgres -f supabase/migrations/20240615_migrate_data.sql
-   ```
+Una vez completados todos los pasos:
 
-3. **Verificación**
-   - Verifica manualmente que los datos se hayan migrado correctamente
-   - Puedes usar consultas como:
-     ```sql
-     SELECT COUNT(*) FROM public.stores;
-     SELECT COUNT(*) FROM marketplace.stores;
-     ```
-
-4. **Limpieza**
-   ```bash
-   psql -h localhost -p 54322 -U postgres -d postgres -f supabase/migrations/20240615_cleanup.sql
-   ```
-
-## Diagnóstico
-
-Si necesitas diagnosticar la estructura de la base de datos, puedes ejecutar:
-
+1. Abre el proyecto Flutter
+2. Ejecuta:
 ```bash
-psql -h localhost -p 54322 -U postgres -d postgres -f supabase/diagnose_database.sql
+flutter pub get
+flutter run
 ```
 
-## Recomendaciones para el Futuro
+3. La app debería conectarse a Supabase y mostrar las 8 tiendas
+4. Puedes navegar a cada tienda y ver sus productos
 
-1. Mantén todas las tablas en un solo esquema (`public`) para evitar duplicidad.
-2. Usa la convención de nombres en inglés para todas las tablas.
-3. Implementa migraciones utilizando el sistema de Supabase para mantener la consistencia.
-4. Asegúrate de que todas las tablas tengan campos consistentes como `created_at`, `updated_at` e `is_deleted`. 
+## 🔄 Resetear la Base de Datos
+
+Si necesitas empezar de cero:
+
+```sql
+-- CUIDADO: Esto eliminará TODOS los datos
+DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS stores CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+DROP FUNCTION IF EXISTS search_stores CASCADE;
+DROP FUNCTION IF EXISTS upsert_profile CASCADE;
+```
+
+Luego vuelve a ejecutar los scripts en orden.
+
+## 📝 Notas Importantes
+
+- Las políticas RLS están configuradas para permitir lectura pública de tiendas y productos
+- Los usuarios solo pueden modificar su propio perfil
+- Todos los productos tienen un inventario inicial de 50 unidades
+- Las tiendas destacadas (`is_featured = true`) son: Mega Super, Farmacia Vida Sana y Sabor Tico

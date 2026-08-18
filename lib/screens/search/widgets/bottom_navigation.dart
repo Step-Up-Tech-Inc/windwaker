@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class BottomNavigation extends StatelessWidget {
@@ -26,14 +27,23 @@ class BottomNavigation extends StatelessWidget {
         unselectedItemColor: Colors.grey,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long),
-            label: 'Pedidos',
+            icon: const Icon(Icons.home),
+            label: AppLocalizations.of(context)!.navHome,
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.search),
+            label: AppLocalizations.of(context)!.navSearch,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.receipt_long),
+            label: AppLocalizations.of(context)!.navOrders,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: AppLocalizations.of(context)!.navProfile,
+          ),
         ],
         onTap: (index) {
           if (index == currentIndex) return;
@@ -46,7 +56,7 @@ class BottomNavigation extends StatelessWidget {
               context.go('/search');
               break;
             case 2:
-              context.go('/orders');
+              context.go('/order-history');
               break;
             case 3:
               context.go('/profile');

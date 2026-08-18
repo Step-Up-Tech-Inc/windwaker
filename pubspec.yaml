@@ -44,7 +44,7 @@ dependencies:
   firebase_core: ^2.24.2
   firebase_analytics: ^10.7.4
   firebase_crashlytics: ^3.5.7
-  # firebase_messaging: ^14.7.9
+  firebase_messaging: ^14.7.9
   firebase_remote_config: ^4.3.3
   google_sign_in: ^6.2.1
   flutter_facebook_auth: ^6.1.1
@@ -60,9 +60,14 @@ dependencies:
   geolocator: ^11.0.0
   uuid: ^4.3.3
   bloc: ^8.1.4
+  http: ^1.2.1
 
   # New dependencies
   introduction_screen: ^3.1.12
+  image_picker: ^1.1.2
+  url_launcher: ^6.3.1
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +79,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  mocktail: ^1.0.4
   build_runner: ^2.4.8
   freezed: ^2.4.7
   json_serializable: ^6.7.1
@@ -84,6 +90,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

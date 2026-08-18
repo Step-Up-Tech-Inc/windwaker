@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:logger/logger.dart';
@@ -16,6 +18,7 @@ class HomeCubit extends Cubit<HomeState> {
   final LocationService _locationService;
   final CartRepository _cartRepository;
   final Logger _logger = Logger();
+  StreamSubscription<bool>? _cartSubscription;
 
   HomeCubit({
     required NegociosRepository negociosRepository,
@@ -25,11 +28,17 @@ class HomeCubit extends Cubit<HomeState> {
        _locationService = locationService,
        _cartRepository = cartRepository,
        super(const HomeState.initial()) {
-    // Suscribirse a los cambios del carrito
-    _cartRepository.cartChanged.listen((_) {
+    // Suscribirse a los cambios del carrito (se cancela en close)
+    _cartSubscription = _cartRepository.cartChanged.listen((_) {
       _logger.d('Notificación de cambio en el carrito recibida');
       loadCartItems();
     });
+  }
+
+  @override
+  Future<void> close() async {
+    await _cartSubscription?.cancel();
+    return super.close();
   }
 
   Future<void> loadInitialData() async {
@@ -97,7 +106,7 @@ class HomeCubit extends Cubit<HomeState> {
   // Método para actualizar el carrito
   Future<void> loadCartItems() async {
     try {
-      if (state is! _Loaded) return;
+      if (isClosed || state is! _Loaded) return;
 
       final _Loaded currentState = state as _Loaded;
 
@@ -108,6 +117,8 @@ class HomeCubit extends Cubit<HomeState> {
       _logger.d(
         'Carrito actualizado: ${cartItems.length} elementos, total: $cartTotal',
       );
+
+      if (isClosed) return;
 
       // Forzar emisión de un nuevo estado para asegurar que la UI se actualice
       // Utilizamos una copia del estado actual con los nuevos datos del carrito
